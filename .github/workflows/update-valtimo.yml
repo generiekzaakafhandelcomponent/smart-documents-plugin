@@ -1,0 +1,51 @@
+name: Update Valtimo version
+
+on:
+  pull_request:
+    types: [opened]
+  workflow_dispatch:
+
+jobs:
+  check-secret:
+    runs-on: ubuntu-latest
+    outputs:
+      has_key: ${{ steps.check.outputs.has_key }}
+    steps:
+      - name: Check for PLUGIN_ANTHROPIC_API_KEY
+        id: check
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.PLUGIN_ANTHROPIC_API_KEY }}
+        run: |
+          if [ -n "$ANTHROPIC_API_KEY" ]; then
+            echo "has_key=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_key=false" >> "$GITHUB_OUTPUT"
+            echo "PLUGIN_ANTHROPIC_API_KEY is not configured; skipping Valtimo update." >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+  update-valtimo:
+    needs: check-secret
+    if: ${{ needs.check-secret.outputs.has_key == 'true' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 1
+
+      - name: Run /update-valtimo skill
+        uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.PLUGIN_ANTHROPIC_API_KEY }}
+          path_to_claude_code_executable: ${{ env.CLAUDE_PATH }}
+          claude_args: |
+            --max-turns 15
+            --model claude-sonnet-4-6
+          prompt: |
+            Run the /update-valtimo command.
+
+            The repository is already checked out in the current working directory.
+            Use the GitHub CLI (gh) to create the pull request in step 6.
