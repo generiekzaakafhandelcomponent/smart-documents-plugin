@@ -71,6 +71,26 @@ services:
         rabbitmq-server
       "
 
+  smartdocuments-mock:
+    # Mock of the SmartDocuments web API, so the example case works without a SmartDocuments account. It fills the
+    # templates with the template data and returns real PDF, DOCX, HTML and XML files.
+    # Web UI (requests, document previews, template editor, error simulation): http://localhost:8099
+    image: python:3.13-alpine
+    container_name: plugin-docker-compose-smartdocuments-mock
+    command: [ "python", "-u", "/app/server.py" ]
+    environment:
+      - SMARTDOCUMENTS_USERNAME=valtimo
+      - SMARTDOCUMENTS_PASSWORD=valtimo
+    ports:
+      - "8099:8080"
+    volumes:
+      - ./imports/smartdocuments-mock:/app
+    healthcheck:
+      test: [ "CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8080/health')" ]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+
   # ZGW
   # Based on the setup of gzac-alo-ut-backend. The ZGW services share the network of the 'localhost' container, so they
   # reach each other (and Valtimo reaches them) on localhost:<port>. The ports are published by the 'localhost' container.

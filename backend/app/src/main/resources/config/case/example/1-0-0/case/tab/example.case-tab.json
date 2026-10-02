@@ -6,6 +6,12 @@
         "contentKey": "-"
     },
     {
+        "name": "Documents",
+        "key": "documents",
+        "type": "standard",
+        "contentKey": "documents"
+    },
+    {
         "name": "Progress",
         "key": "progress",
         "type": "standard",

@@ -6,15 +6,40 @@
     "properties": {
         "name": {
             "type": "string",
-            "description": "Name"
+            "description": "Name, sent to SmartDocuments as template data"
         },
-        "apiResult": {
+        "templateGroup": {
             "type": "string",
-            "description": "Result from the sample plugin Time API call"
+            "description": "SmartDocuments template group"
         },
-        "message": {
+        "templateName": {
             "type": "string",
-            "description": "Message that was set in the plugin action"
+            "description": "SmartDocuments template name"
+        },
+        "format": {
+            "type": "string",
+            "enum": [
+                "DOCX",
+                "HTML",
+                "PDF",
+                "XML"
+            ],
+            "description": "Format of the generated document"
+        },
+        "templateNames": {
+            "type": "array",
+            "items": {
+                "type": "string"
+            },
+            "description": "Template names returned by the get-template-names action"
+        },
+        "generatedDocumentResourceId": {
+            "type": "string",
+            "description": "Id of the temporary resource created by the generate-document action"
+        },
+        "storedDocumentUrl": {
+            "type": "string",
+            "description": "URL of the document stored in the Documenten API"
         }
     }
 }

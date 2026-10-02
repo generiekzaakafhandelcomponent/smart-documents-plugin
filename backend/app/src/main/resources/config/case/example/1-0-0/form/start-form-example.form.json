@@ -6,7 +6,7 @@
             "type": "htmlelement",
             "input": false,
             "label": "Instructions",
-            "content": "Start a new example case. The sample plugin will call a Time API during execution.",
+            "content": "Start a case to test the SmartDocuments plugin. The process first fetches the template names of the template group (get-template-names), then generates a document with the chosen template and format (generate-document).",
             "tableView": false,
             "refreshOnChange": false
         },
@@ -15,8 +15,58 @@
             "type": "textfield",
             "input": true,
             "label": "Name",
+            "description": "Sent to SmartDocuments as template data (key 'name').",
             "tableView": true,
-            "applyMaskOn": "change"
+            "applyMaskOn": "change",
+            "validate": {
+                "required": true
+            }
+        },
+        {
+            "key": "templateGroup",
+            "type": "textfield",
+            "input": true,
+            "label": "Template group",
+            "description": "The local mock knows the groups 'Example' and 'Letters' (nested in 'Example').",
+            "defaultValue": "Example",
+            "tableView": true,
+            "applyMaskOn": "change",
+            "validate": {
+                "required": true
+            }
+        },
+        {
+            "key": "templateName",
+            "type": "textfield",
+            "input": true,
+            "label": "Template name",
+            "defaultValue": "Example template",
+            "tableView": true,
+            "applyMaskOn": "change",
+            "validate": {
+                "required": true
+            }
+        },
+        {
+            "key": "format",
+            "type": "select",
+            "input": true,
+            "label": "Document format",
+            "widget": "choicesjs",
+            "dataSrc": "values",
+            "data": {
+                "values": [
+                    {"label": "DOCX", "value": "DOCX"},
+                    {"label": "PDF", "value": "PDF"},
+                    {"label": "HTML", "value": "HTML"},
+                    {"label": "XML", "value": "XML"}
+                ]
+            },
+            "defaultValue": "PDF",
+            "tableView": true,
+            "validate": {
+                "required": true
+            }
         },
         {
             "key": "submit",

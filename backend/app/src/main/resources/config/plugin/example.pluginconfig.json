@@ -1,10 +1,12 @@
 [
     {
-        "id": "4ac9a49f-4aeb-4f91-86d9-853fd95a1b33",
-        "title": "Sample plugin (Autodeployed)",
-        "pluginDefinitionKey": "sample-plugin",
+        "id": "b3bfac2b-06bf-4933-8527-af8015335a3d",
+        "title": "SmartDocuments (Autodeployed)",
+        "pluginDefinitionKey": "smartdocuments",
         "properties": {
-            "apiUrl": "https://timeapi.io/api/time/current/zone?timeZone=Europe/Amsterdam"
+            "url": "${VALTIMO_SMART_DOCUMENTS_URL:http://localhost:8099/}",
+            "username": "${VALTIMO_SMART_DOCUMENTS_USERNAME:valtimo}",
+            "password": "${VALTIMO_SMART_DOCUMENTS_PASSWORD:valtimo}"
         }
     }
 ]
