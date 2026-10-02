@@ -1,5 +1,5 @@
 /*
- * Copyright 2026 Ritense BV, the Netherlands.
+ * Copyright 2015-2024 Ritense BV, the Netherlands.
  *
  * Licensed under EUPL, Version 1.2 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,9 +14,11 @@
  * limitations under the License.
  */
 
-package com.ritense.valtimoplugins.sampleplugin
+package com.ritense.valtimoplugins.smartdocuments
 
+import com.ritense.resource.service.ResourceService
 import com.ritense.testutilscommon.junit.extension.LiquibaseRunnerExtension
+import com.ritense.valtimo.contract.authentication.CurrentUserService
 import com.ritense.valtimo.contract.authentication.UserManagementService
 import com.ritense.valtimo.contract.mail.MailSender
 import org.junit.jupiter.api.Tag
@@ -26,11 +28,17 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean
 import org.springframework.test.context.junit.jupiter.SpringExtension
 
 @SpringBootTest
-@ExtendWith(value = [SpringExtension::class, LiquibaseRunnerExtension::class])
+@ExtendWith(SpringExtension::class, LiquibaseRunnerExtension::class)
 @Tag("integration")
 abstract class BaseIntegrationTest : BaseTest() {
     @MockitoBean
     lateinit var userManagementService: UserManagementService
+
+    @MockitoBean
+    lateinit var currentUserService: CurrentUserService
+
+    @MockitoBean
+    lateinit var resourceService: ResourceService
 
     @MockitoBean
     lateinit var mailSender: MailSender

@@ -1,5 +1,5 @@
 /*
- * Copyright 2026 Ritense BV, the Netherlands.
+ * Copyright 2015-2024 Ritense BV, the Netherlands.
  *
  * Licensed under EUPL, Version 1.2 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,12 +14,20 @@
  * limitations under the License.
  */
 
-package com.ritense.valtimoplugins.sampleplugin
+package com.ritense.valtimoplugins.smartdocuments.io
 
+import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
+import kotlin.text.Charsets.UTF_8
 
-internal class ApplicationStartIT : BaseIntegrationTest() {
+class UnicodeUnescapeInputStreamTest {
     @Test
-    fun `should start application`() {
+    fun `should only read part of input stream`() {
+        val inputStream = "1\u002b2\u003D3".byteInputStream(UTF_8)
+
+        val unescapedIn = UnicodeUnescapeInputStream(inputStream)
+
+        val result = unescapedIn.bufferedReader().use { it.readText() }
+        assertThat(result).isEqualTo("1+2=3")
     }
 }
