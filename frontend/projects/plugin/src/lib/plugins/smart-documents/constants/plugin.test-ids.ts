@@ -14,4 +14,9 @@
  * limitations under the License.
  */
 
-export * from "./config";
+export const SMART_DOCUMENTS_CONFIGURATION_TEST_IDS = {
+  configurationTitle: 'smartDocumentsConfigurationTitle',
+  url: 'smartDocumentsUrl',
+  username: 'smartDocumentsUsername',
+  password: 'smartDocumentsPassword',
+} as const;

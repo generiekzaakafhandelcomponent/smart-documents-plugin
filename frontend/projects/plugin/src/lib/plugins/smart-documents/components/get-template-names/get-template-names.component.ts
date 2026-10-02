@@ -14,26 +14,29 @@
  * limitations under the License.
  */
 
-import {Component, EventEmitter, Input, OnDestroy, OnInit, Output} from "@angular/core";
-import {PluginConfigurationComponent, PluginConfigurationData} from "@valtimo/plugin";
-import {BehaviorSubject, combineLatest, Observable, Subscription, take} from "rxjs";
-import {SamplePluginConfig} from "../../models";
+import {Component, EventEmitter, Input, OnDestroy, OnInit, Output} from '@angular/core';
+import {BehaviorSubject, combineLatest, Observable, Subscription, take} from 'rxjs';
+import {GetTemplateNamesConfig} from '../../models';
+import {FunctionConfigurationComponent} from '@valtimo/plugin';
 
 @Component({
+  selector: 'valtimo-get-template-names',
+  templateUrl: './get-template-names.component.html',
   standalone: false,
-  selector: "valtimo-sample-plugin-configuration",
-  templateUrl: "./sample-plugin-configuration.component.html",
 })
-export class SamplePluginConfigurationComponent implements PluginConfigurationComponent, OnInit, OnDestroy {
-  @Input() save$!: Observable<void>;
-  @Input() disabled$!: Observable<boolean>;
-  @Input() pluginId!: string;
-  @Input() prefillConfiguration$!: Observable<SamplePluginConfig>;
+export class GetTemplateNamesComponent
+  implements FunctionConfigurationComponent, OnInit, OnDestroy
+{
+  @Input() save$: Observable<void>;
+  @Input() disabled$: Observable<boolean>;
+  @Input() pluginId: string;
+  @Input() prefillConfiguration$: Observable<GetTemplateNamesConfig>;
+  @Output() configuration: EventEmitter<GetTemplateNamesConfig> =
+    new EventEmitter<GetTemplateNamesConfig>();
   @Output() valid: EventEmitter<boolean> = new EventEmitter<boolean>();
-  @Output() configuration: EventEmitter<PluginConfigurationData> = new EventEmitter<PluginConfigurationData>();
 
+  private readonly formValue$ = new BehaviorSubject<GetTemplateNamesConfig | null>(null);
   private saveSubscription!: Subscription;
-  private readonly formValue$ = new BehaviorSubject<SamplePluginConfig | null>(null);
   private readonly valid$ = new BehaviorSubject<boolean>(false);
 
   ngOnInit(): void {
@@ -44,24 +47,27 @@ export class SamplePluginConfigurationComponent implements PluginConfigurationCo
     this.saveSubscription?.unsubscribe();
   }
 
-  formValueChange(formValue: SamplePluginConfig): void {
+  formValueChange(formValue: GetTemplateNamesConfig): void {
     this.formValue$.next(formValue);
     this.handleValid(formValue);
   }
 
-  private handleValid(formValue: SamplePluginConfig): void {
-    const valid = !!(formValue.configurationTitle && formValue.apiUrl);
+  private handleValid(formValue: GetTemplateNamesConfig): void {
+    const valid = !!(
+      formValue.templateGroupName && formValue.resultingTemplateNameListProcessVariableName
+    );
+
     this.valid$.next(valid);
     this.valid.emit(valid);
   }
 
   private openSaveSubscription(): void {
-    this.saveSubscription = this.save$?.subscribe(() => {
+    this.saveSubscription = this.save$?.subscribe(save => {
       combineLatest([this.formValue$, this.valid$])
         .pipe(take(1))
         .subscribe(([formValue, valid]) => {
           if (valid) {
-            this.configuration.emit(formValue!);
+            this.configuration.emit(formValue);
           }
         });
     });

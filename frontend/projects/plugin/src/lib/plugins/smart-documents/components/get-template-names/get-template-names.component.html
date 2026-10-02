@@ -13,33 +13,31 @@
   ~ See the License for the specific language governing permissions and
   ~ limitations under the License.
   -->
-
 <v-form
   (valueChange)="formValueChange($event)"
   *ngIf="{
     disabled: disabled$ | async,
-    prefill: prefillConfiguration$ ? (prefillConfiguration$ | async) : null
+    prefill: prefillConfiguration$ ? (prefillConfiguration$ | async) : null,
   } as obs"
 >
   <v-input
-    name="configurationTitle"
-    [title]="'configurationTitle' | pluginTranslate: pluginId | async"
+    name="templateGroupName"
+    [title]="'templateGroupName' | pluginTranslate: pluginId | async"
     [margin]="true"
+    [defaultValue]="obs.prefill?.templateGroupName"
     [disabled]="obs.disabled"
-    [defaultValue]="obs.prefill?.configurationTitle"
     [required]="true"
-    [widthPx]="350"
-    placeholder="Sample Plugin"
+    [trim]="true"
   >
   </v-input>
   <v-input
-    name="apiUrl"
-    [title]="'apiUrl' | pluginTranslate: pluginId | async"
+    name="resultingTemplateNameListProcessVariableName"
+    [title]="'resultingTemplateNameListProcessVariableName' | pluginTranslate: pluginId | async"
     [margin]="true"
+    [defaultValue]="obs.prefill?.resultingTemplateNameListProcessVariableName"
     [disabled]="obs.disabled"
-    [defaultValue]="obs.prefill?.apiUrl"
     [required]="true"
-    [widthPx]="350"
+    [trim]="true"
   >
   </v-input>
 </v-form>

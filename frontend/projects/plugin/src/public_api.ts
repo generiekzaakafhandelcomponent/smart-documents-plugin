@@ -15,11 +15,12 @@
  */
 
 /*
- * Public API Surface of sample-plugin
+ * Public API Surface of @valtimo-plugins/smartdocuments
  */
 
-export * from "./lib/plugins/sample-plugin/models";
-export * from "./lib/plugins/sample-plugin/sample-plugin-module";
-export * from "./lib/plugins/sample-plugin/sample-plugin.specification";
-export * from "./lib/plugins/sample-plugin/components/sample-plugin-configuration/sample-plugin-configuration.component";
-export * from "./lib/plugins/sample-plugin/components/sample-action-configuration/sample-action-configuration.component";
+export * from './lib/plugins/smart-documents/models';
+export * from './lib/plugins/smart-documents/smart-documents-plugin.module';
+export * from './lib/plugins/smart-documents/smart-documents-plugin.specification';
+export * from './lib/plugins/smart-documents/components/smart-documents-configuration/smart-documents-configuration.component';
+export * from './lib/plugins/smart-documents/components/generate-document-configuration/generate-document-configuration.component';
+export * from './lib/plugins/smart-documents/components/get-template-names/get-template-names.component';

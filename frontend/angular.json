@@ -3,7 +3,7 @@
     "version": 1,
     "newProjectRoot": "projects",
     "projects": {
-        "gzac-plugin-template": {
+        "smart-documents-plugin": {
             "root": "",
             "sourceRoot": "src",
             "projectType": "application",
@@ -18,7 +18,7 @@
                     "builder": "@angular-devkit/build-angular:browser",
                     "options": {
                         "aot": false,
-                        "outputPath": "deployment/gzac-plugin-template",
+                        "outputPath": "deployment/smart-documents-plugin",
                         "index": "src/index.html",
                         "main": "src/main.ts",
                         "polyfills": "src/polyfills.ts",
@@ -107,13 +107,13 @@
                 "serve": {
                     "builder": "@angular-devkit/build-angular:dev-server",
                     "options": {
-                        "buildTarget": "gzac-plugin-template:build"
+                        "buildTarget": "smart-documents-plugin:build"
                     }
                 },
                 "extract-i18n": {
                     "builder": "@angular-devkit/build-angular:extract-i18n",
                     "options": {
-                        "buildTarget": "gzac-plugin-template:build"
+                        "buildTarget": "smart-documents-plugin:build"
                     }
                 },
                 "test": {
@@ -135,7 +135,7 @@
                 }
             }
         },
-        "@valtimo-plugins/sample-plugin": {
+        "@valtimo-plugins/smartdocuments": {
             "projectType": "library",
             "root": "projects/plugin",
             "sourceRoot": "projects/plugin/src",

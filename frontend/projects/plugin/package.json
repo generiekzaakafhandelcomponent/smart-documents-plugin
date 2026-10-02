@@ -1,14 +1,17 @@
 {
-    "name": "@valtimo-plugins/sample-plugin",
+    "name": "@valtimo-plugins/smartdocuments",
     "license": "EUPL-1.2",
-    "version": "0.0.1",
+    "version": "1.0.0",
     "scripts": {
-        "build": "ng build @valtimo-plugins/sample-plugin",
-        "watch": "ng build @valtimo-plugins/sample-plugin --watch"
+        "build": "ng build @valtimo-plugins/smartdocuments",
+        "watch": "ng build @valtimo-plugins/smartdocuments --watch"
     },
     "peerDependencies": {
         "@angular/common": "19.2.20",
-        "@angular/core": "19.2.20"
+        "@angular/core": "19.2.20",
+        "@valtimo/components": "13.48.0",
+        "@valtimo/plugin": "13.48.0",
+        "rxjs": "7.8.2"
     },
     "dependencies": {
         "@angular/forms": "19.2.20",
