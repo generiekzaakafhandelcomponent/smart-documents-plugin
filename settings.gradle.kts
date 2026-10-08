@@ -1,7 +1,6 @@
 rootProject.name = "smart-documents-plugin"
 include(
     "backend",
-    "backend:app",
     "backend:plugin",
     "frontend",
 )
