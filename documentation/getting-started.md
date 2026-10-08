@@ -4,8 +4,9 @@ This repository contains the SmartDocuments plugin:
 
 - `backend/plugin`: the backend plugin (`com.ritense.valtimoplugins:smartdocuments`)
 - `frontend/projects/plugin`: the frontend library (`@valtimo-plugins/smartdocuments`)
-- `backend/app` and `frontend/src`: an example application that uses the plugin, see
-  [Example Application](example-application.md)
+- The example application (`backend/app` and `frontend/src`) and the SmartDocuments mock are only on the `main` branch
+  (Valtimo 13), see [Example Application](../../../blob/main/documentation/example-application.md). This `v12` branch
+  builds and tests the plugin against Valtimo 12.
 
 ## Build and test
 

@@ -2,6 +2,15 @@
 
 Overzicht van wijzigingen per versie van de SmartDocuments plugin.
 
+## 1.1.0-V12
+
+The Valtimo 12 build of 1.1.0, from the `v12` branch. Same features and plugin key as 1.1.0.
+
+- Built against Valtimo 12.48.0: Camunda 7.21 instead of Operaton, Java 17, Angular 17 and `@valtimo/*` 12.48.0.
+- Differences in the configuration screen, because the Valtimo 12 components don't support them:
+  - The template data value path selector has no case definition selector.
+  - The payload format dropdown can be cleared; an empty payload format means JSON.
+
 ## 1.1.0
 
 - New optional property `payloadFormat` (`JSON` or `XML`) on the `generate-document` action. With `XML`, the template data

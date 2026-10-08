@@ -103,7 +103,7 @@ the import to `@valtimo-plugins/smartdocuments`.
 ## Documentation
 
 - [Plugin documentation](documentation/plugin.md): configuration, actions and usage
-- [Example application](documentation/example-application.md): running the example app locally and testing the plugin with the included SmartDocuments mock
+- [Example application](../../blob/main/documentation/example-application.md) (`main` branch, Valtimo 13): running the example app locally and testing the plugin with the included SmartDocuments mock
 - [Getting started](documentation/getting-started.md): development instructions
 - [Release notes](documentation/release-notes.md)
 
