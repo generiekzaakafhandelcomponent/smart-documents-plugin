@@ -115,7 +115,6 @@
     name="payloadFormatSelect"
     [disabled]="obs.disabled"
     [defaultSelectionId]="fixedValue(obs.prefill?.payloadFormat, PAYLOAD_FORMATS) || DEFAULT_PAYLOAD_FORMAT"
-    [clearable]="false"
   ></v-select>
   <v-input
     [style.display]="payloadFormatUsesValueResolver ? null : 'none'"
@@ -145,7 +144,6 @@
       ValuePathSelectorPrefix.CASE,
       ValuePathSelectorPrefix.ZAAK,
     ]"
-    [valuePathSelectorShowCaseDefinitionSelector]="true"
     [keyColumnFlex]="1"
     [valueColumnFlex]="2"
     [keyColumnTitle]="'key' | pluginTranslate: pluginId | async"

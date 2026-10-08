@@ -23,12 +23,6 @@
         ],
         "useDefineForClassFields": false,
         "paths": {
-            "@src": [
-                "src"
-            ],
-            "@src/*": [
-                "src/*"
-            ],
             "@valtimo-plugins/smartdocuments": [
                 "projects/plugin/src/public_api.ts"
             ]

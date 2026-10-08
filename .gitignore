@@ -175,3 +175,8 @@ migration
 ######################
 backend/app/imports/smartdocuments-mock/data/
 __pycache__/
+
+######################
+# Nx cache (Angular 17 CLI)
+######################
+frontend/.nx/
