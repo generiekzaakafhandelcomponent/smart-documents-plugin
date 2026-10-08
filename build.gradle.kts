@@ -63,12 +63,12 @@ subprojects {
         apply(plugin = "maven-publish")
         apply(plugin = "org.jlleitschuh.gradle.ktlint")
 
-        java.sourceCompatibility = JavaVersion.VERSION_21
-        java.targetCompatibility = JavaVersion.VERSION_21
+        java.sourceCompatibility = JavaVersion.VERSION_17
+        java.targetCompatibility = JavaVersion.VERSION_17
 
         tasks.withType<KotlinCompile> {
             compilerOptions {
-                jvmTarget = JvmTarget.JVM_21
+                jvmTarget = JvmTarget.JVM_17
                 javaParameters = true
             }
         }

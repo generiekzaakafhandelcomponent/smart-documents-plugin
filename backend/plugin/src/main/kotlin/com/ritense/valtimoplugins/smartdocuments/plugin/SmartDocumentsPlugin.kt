@@ -36,8 +36,8 @@ import com.ritense.valtimoplugins.smartdocuments.domain.PayloadFormatOption
 import com.ritense.valtimoplugins.smartdocuments.domain.SmartDocumentsRequest
 import com.ritense.valtimoplugins.smartdocuments.domain.TemplateGroup
 import com.ritense.valueresolver.ValueResolverService
+import org.camunda.bpm.engine.delegate.DelegateExecution
 import org.hibernate.validator.constraints.URL
-import org.operaton.bpm.engine.delegate.DelegateExecution
 import org.springframework.context.ApplicationEventPublisher
 import java.time.LocalDateTime
 import java.util.UUID

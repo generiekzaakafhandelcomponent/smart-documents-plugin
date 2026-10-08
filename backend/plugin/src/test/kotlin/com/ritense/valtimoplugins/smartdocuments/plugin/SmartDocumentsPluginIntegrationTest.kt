@@ -22,6 +22,7 @@ import com.ritense.authorization.AuthorizationContext.Companion.runWithoutAuthor
 import com.ritense.document.domain.impl.request.NewDocumentRequest
 import com.ritense.plugin.domain.PluginConfiguration
 import com.ritense.plugin.domain.PluginProcessLink
+import com.ritense.plugin.domain.PluginProcessLinkId
 import com.ritense.plugin.repository.PluginProcessLinkRepository
 import com.ritense.plugin.service.PluginService
 import com.ritense.processdocument.domain.impl.request.NewDocumentAndStartProcessRequest
@@ -29,15 +30,15 @@ import com.ritense.processdocument.service.ProcessDocumentService
 import com.ritense.processlink.domain.ActivityTypeWithEventName
 import com.ritense.resource.domain.MetadataType
 import com.ritense.resource.service.TemporaryResourceStorageService
-import com.ritense.valtimo.operaton.domain.OperatonProcessDefinition
-import com.ritense.valtimo.operaton.service.OperatonRepositoryService
+import com.ritense.valtimo.camunda.domain.CamundaProcessDefinition
+import com.ritense.valtimo.camunda.service.CamundaRepositoryService
 import com.ritense.valtimoplugins.smartdocuments.BaseSmartDocumentsIntegrationTest
 import com.ritense.valtimoplugins.smartdocuments.domain.SmartDocumentsRequest
 import org.assertj.core.api.Assertions.assertThat
+import org.camunda.bpm.engine.RuntimeService
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
-import org.operaton.bpm.engine.RuntimeService
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.autoconfigure.web.reactive.AutoConfigureWebTestClient
 import org.springframework.http.HttpMethod
@@ -54,13 +55,13 @@ class SmartDocumentsPluginIntegrationTest
         private val pluginService: PluginService,
         private val smartDocumentsPluginFactory: SmartDocumentsPluginFactory,
         private val pluginProcessLinkRepository: PluginProcessLinkRepository,
-        private val operatonRepositoryService: OperatonRepositoryService,
+        private val camundaRepositoryService: CamundaRepositoryService,
         private val runtimeService: RuntimeService,
         private val temporaryResourceStorageService: TemporaryResourceStorageService,
     ) : BaseSmartDocumentsIntegrationTest() {
         lateinit var smartDocumentsPlugin: SmartDocumentsPlugin
         lateinit var pluginConfiguration: PluginConfiguration
-        lateinit var processDefinition: OperatonProcessDefinition
+        lateinit var processDefinition: CamundaProcessDefinition
 
         @BeforeEach
         internal fun beforeEach() {
@@ -110,7 +111,7 @@ class SmartDocumentsPluginIntegrationTest
             smartDocumentsPlugin = smartDocumentsPluginFactory.create(pluginConfiguration)
             processDefinition =
                 runWithoutAuthorization {
-                    operatonRepositoryService.findLatestProcessDefinition("document-generation-plugin")!!
+                    camundaRepositoryService.findLatestProcessDefinition("document-generation-plugin")!!
                 }
 
             saveProcessLink(generateDocumentActionProperties)
@@ -121,12 +122,7 @@ class SmartDocumentsPluginIntegrationTest
             // given
             val documentContent = objectMapper.readTree("{\"lastname\": \"Klaveren\"}")
             val newDocumentRequest =
-                NewDocumentRequest(
-                    DOCUMENT_DEFINITION_KEY,
-                    "profile",
-                    "1.0.0",
-                    documentContent,
-                )
+                NewDocumentRequest(DOCUMENT_DEFINITION_KEY, documentContent)
             val request =
                 NewDocumentAndStartProcessRequest(PROCESS_DEFINITION_KEY, newDocumentRequest)
                     .withProcessVars(mapOf("age" to 138))
@@ -156,12 +152,7 @@ class SmartDocumentsPluginIntegrationTest
         fun `should create temp file when generating document`() {
             // given
             val newDocumentRequest =
-                NewDocumentRequest(
-                    DOCUMENT_DEFINITION_KEY,
-                    "profile",
-                    "1.0.0",
-                    objectMapper.createObjectNode(),
-                )
+                NewDocumentRequest(DOCUMENT_DEFINITION_KEY, objectMapper.createObjectNode())
             val request = NewDocumentAndStartProcessRequest(PROCESS_DEFINITION_KEY, newDocumentRequest)
 
             // when
@@ -213,12 +204,7 @@ class SmartDocumentsPluginIntegrationTest
                 """.trimIndent(),
             )
             val newDocumentRequest =
-                NewDocumentRequest(
-                    DOCUMENT_DEFINITION_KEY,
-                    "profile",
-                    "1.0.0",
-                    objectMapper.createObjectNode(),
-                )
+                NewDocumentRequest(DOCUMENT_DEFINITION_KEY, objectMapper.createObjectNode())
             val request =
                 NewDocumentAndStartProcessRequest(PROCESS_DEFINITION_KEY, newDocumentRequest)
                     .withProcessVars(mapOf("my-template-name-variable" to "my-custom-template-name"))
@@ -307,12 +293,7 @@ class SmartDocumentsPluginIntegrationTest
                 """.trimIndent(),
             )
             val newDocumentRequest =
-                NewDocumentRequest(
-                    DOCUMENT_DEFINITION_KEY,
-                    "profile",
-                    "1.0.0",
-                    objectMapper.createObjectNode(),
-                )
+                NewDocumentRequest(DOCUMENT_DEFINITION_KEY, objectMapper.createObjectNode())
             val request = NewDocumentAndStartProcessRequest(PROCESS_DEFINITION_KEY, newDocumentRequest)
 
             // when
@@ -333,7 +314,7 @@ class SmartDocumentsPluginIntegrationTest
             val request =
                 NewDocumentAndStartProcessRequest(
                     PROCESS_DEFINITION_KEY,
-                    NewDocumentRequest(DOCUMENT_DEFINITION_KEY, "profile", "1.0.0", documentContent),
+                    NewDocumentRequest(DOCUMENT_DEFINITION_KEY, documentContent),
                 ).withProcessVars(processVars)
             val result = runWithoutAuthorization { processDocumentService.newDocumentAndStartProcess(request) }
             assertThat(result.errors()).isEmpty()
@@ -342,16 +323,13 @@ class SmartDocumentsPluginIntegrationTest
         private fun saveProcessLink(generateDocumentActionProperties: String) {
             pluginProcessLinkRepository.save(
                 PluginProcessLink(
-                    id = UUID.fromString("aad69a1b-0325-40ff-91df-27762305dcc1"),
-                    processDefinitionId = processDefinition.id,
-                    activityId = "GenerateDocument",
-                    activityType = ActivityTypeWithEventName.SERVICE_TASK_START,
-                    actionProperties = objectMapper.readTree(generateDocumentActionProperties) as ObjectNode,
-                    pluginConfigurationId = pluginConfiguration.id,
-                    pluginConfigurationReference =
-                        com.ritense.plugin.domain
-                            .PluginConfigurationReference(),
-                    pluginActionDefinitionKey = "generate-document",
+                    PluginProcessLinkId(UUID.fromString("aad69a1b-0325-40ff-91df-27762305dcc1")),
+                    processDefinition.id,
+                    "GenerateDocument",
+                    objectMapper.readTree(generateDocumentActionProperties) as ObjectNode,
+                    pluginConfiguration.id,
+                    "generate-document",
+                    ActivityTypeWithEventName.SERVICE_TASK_START,
                 ),
             )
         }

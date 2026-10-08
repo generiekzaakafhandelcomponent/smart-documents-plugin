@@ -36,7 +36,7 @@ valtimo:
     acceptedMimeTypes:
       - text/plain
       - application/xml
-operaton:
+camunda:
   bpm:
     history-level: audit
     generic-properties:
