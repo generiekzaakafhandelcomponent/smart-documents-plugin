@@ -24,6 +24,7 @@ import com.ritense.valtimo.contract.upload.ValtimoUploadProperties
 import com.ritense.valtimoplugins.smartdocuments.BaseTest
 import com.ritense.valtimoplugins.smartdocuments.config.SmartDocumentsAuthentication
 import com.ritense.valtimoplugins.smartdocuments.domain.DocumentFormatOption
+import com.ritense.valtimoplugins.smartdocuments.domain.PayloadFormatOption
 import com.ritense.valtimoplugins.smartdocuments.domain.SmartDocumentsRequest
 import com.ritense.valtimoplugins.smartdocuments.domain.SmartDocumentsTemplateData
 import okhttp3.mockwebserver.MockResponse
@@ -385,6 +386,81 @@ internal class SmartDocumentsClientTest : BaseTest() {
     }
 
     @Test
+    fun `should send the request as JSON by default`() {
+        mockDocumentenApi.enqueue(mockResponse(pdfResponseBody()))
+
+        client.generateDocumentStream(authentication, requestWithMultiLineText(), DocumentFormatOption.PDF)
+
+        val request = mockDocumentenApi.takeRequest()
+        assertThat(request.getHeader("Content-Type")).startsWith("application/json")
+        assertThat(request.body.readUtf8()).contains("\"toelichting\":\"regel 1\\nregel 2\"")
+    }
+
+    @Test
+    fun `should send the request as XML with xml space preserve when payload format is XML`() {
+        mockDocumentenApi.enqueue(mockResponse(pdfResponseBody()))
+
+        val documentResult =
+            client.generateDocumentStream(
+                authentication,
+                requestWithMultiLineText(),
+                DocumentFormatOption.PDF,
+                PayloadFormatOption.XML,
+            )
+
+        assertThat(documentResult.filename).isEqualTo("test.pdf")
+        val request = mockDocumentenApi.takeRequest()
+        assertThat(request.path).isEqualTo("/wsxmldeposit/deposit/unattended")
+        assertThat(request.getHeader("Content-Type")).isEqualTo("application/xml;charset=UTF-8")
+        assertThat(request.getHeader("Accept")).isEqualTo("application/json")
+        assertThat(request.getHeader("Authorization")).startsWith("Basic ")
+        val body = request.body.readUtf8()
+        assertThat(body).startsWith("<?xml").contains("encoding='UTF-8'?><root>")
+        assertThat(body).contains("<toelichting xml:space=\"preserve\">regel 1\nregel 2</toelichting>")
+        assertThat(body).contains("<naam>Café Zoë</naam>")
+        assertThat(body).contains("<TemplateGroup>my-real-template-group</TemplateGroup>")
+    }
+
+    @Test
+    fun `400 Bad Request with XML payload should fall back to a random templateGroup in XML`() {
+        val errorBody = readFileAsString("/data/post-generate-document-400-error-response.html")
+        mockDocumentenApi.enqueue(mockResponse(errorBody, "text/html; charset=utf-8", 400))
+        mockDocumentenApi.enqueue(mockResponse(pdfResponseBody()))
+
+        client.generateDocumentStream(
+            authentication,
+            requestWithMultiLineText(),
+            DocumentFormatOption.PDF,
+            PayloadFormatOption.XML,
+        )
+
+        assertThat(requestsThisTest).isEqualTo(2)
+        val firstBody = mockDocumentenApi.takeRequest().body.readUtf8()
+        val fallback = mockDocumentenApi.takeRequest()
+        val fallbackBody = fallback.body.readUtf8()
+        assertThat(firstBody).contains("<TemplateGroup>my-real-template-group</TemplateGroup>")
+        assertThat(fallback.getHeader("Content-Type")).isEqualTo("application/xml;charset=UTF-8")
+        assertThat(fallbackBody).containsPattern(
+            "<TemplateGroup>[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}</TemplateGroup>",
+        )
+        assertThat(fallbackBody).contains("<toelichting xml:space=\"preserve\">regel 1\nregel 2</toelichting>")
+    }
+
+    @Test
+    fun `should not send a request when a template data key is not valid in XML`() {
+        val request =
+            SmartDocumentsRequest(
+                mapOf("my field" to "x"),
+                SmartDocumentsRequest.SmartDocument(SmartDocumentsRequest.Selection("group", "template")),
+            )
+
+        assertThrows(IllegalArgumentException::class.java) {
+            client.generateDocumentStream(authentication, request, DocumentFormatOption.PDF, PayloadFormatOption.XML)
+        }
+        assertThat(requestsThisTest).isEqualTo(0)
+    }
+
+    @Test
     fun `200 ok response should return DocumentStructure`() {
         // given
         mockDocumentenApi.enqueue(
@@ -408,6 +484,27 @@ internal class SmartDocumentsClientTest : BaseTest() {
         assertThat(response).isNotNull
         assertThat(response).isInstanceOf(SmartDocumentsTemplateData::class.java)
     }
+
+    private fun requestWithMultiLineText() =
+        SmartDocumentsRequest(
+            mapOf("toelichting" to "regel 1\nregel 2", "naam" to "Café Zoë"),
+            SmartDocumentsRequest.SmartDocument(
+                SmartDocumentsRequest.Selection("my-real-template-group", "template"),
+            ),
+        )
+
+    private fun pdfResponseBody() =
+        """
+        {
+            "file": [
+                {
+                    "filename": "test.pdf",
+                    "document": { "data": "Y29udGVudA==" },
+                    "outputFormat": "PDF"
+                }
+            ]
+        }
+        """.trimIndent()
 
     private fun mockResponse(
         body: String,

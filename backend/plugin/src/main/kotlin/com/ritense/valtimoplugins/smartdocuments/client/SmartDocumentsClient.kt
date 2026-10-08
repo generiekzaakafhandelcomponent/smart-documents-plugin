@@ -25,18 +25,22 @@ import com.ritense.valtimoplugins.smartdocuments.config.SmartDocumentsAuthentica
 import com.ritense.valtimoplugins.smartdocuments.domain.DocumentFormatOption
 import com.ritense.valtimoplugins.smartdocuments.domain.FileStreamResponse
 import com.ritense.valtimoplugins.smartdocuments.domain.FilesResponse
+import com.ritense.valtimoplugins.smartdocuments.domain.PayloadFormatOption
 import com.ritense.valtimoplugins.smartdocuments.domain.SmartDocumentsRequest
 import com.ritense.valtimoplugins.smartdocuments.domain.SmartDocumentsTemplateData
 import com.ritense.valtimoplugins.smartdocuments.io.SubInputStream
 import com.ritense.valtimoplugins.smartdocuments.io.UnicodeUnescapeInputStream
 import org.apache.commons.io.FilenameUtils
 import org.springframework.core.io.Resource
+import org.springframework.http.MediaType
 import org.springframework.http.converter.ResourceHttpMessageConverter
 import org.springframework.stereotype.Component
 import org.springframework.web.client.HttpClientErrorException
 import org.springframework.web.client.RestClient
+import org.springframework.web.client.RestClient.RequestBodySpec
 import org.springframework.web.client.body
 import java.io.InputStream
+import java.nio.charset.StandardCharsets
 import java.util.Base64
 import java.util.UUID
 
@@ -60,24 +64,26 @@ class SmartDocumentsClient(
     fun generateDocument(
         authentication: SmartDocumentsAuthentication,
         smartDocumentsRequest: SmartDocumentsRequest,
+        payloadFormat: PayloadFormatOption = PayloadFormatOption.JSON,
     ): FilesResponse =
         try {
-            postDepositForFiles(authentication, smartDocumentsRequest)
+            postDepositForFiles(authentication, smartDocumentsRequest, payloadFormat)
         } catch (e: HttpClientErrorException.BadRequest) {
-            postDepositForFiles(authentication, fixRequest(smartDocumentsRequest))
+            postDepositForFiles(authentication, fixRequest(smartDocumentsRequest), payloadFormat)
         }
 
     fun generateDocumentStream(
         authentication: SmartDocumentsAuthentication,
         smartDocumentsRequest: SmartDocumentsRequest,
         outputFormat: DocumentFormatOption,
+        payloadFormat: PayloadFormatOption = PayloadFormatOption.JSON,
     ): FileStreamResponse {
         // Stream complete response (json) to a Resource
         val result =
             try {
-                postDepositForResource(authentication, smartDocumentsRequest)
+                postDepositForResource(authentication, smartDocumentsRequest, payloadFormat)
             } catch (e: HttpClientErrorException.BadRequest) {
-                postDepositForResource(authentication, fixRequest(smartDocumentsRequest))
+                postDepositForResource(authentication, fixRequest(smartDocumentsRequest), payloadFormat)
             }
 
         val responseResourceId = temporaryResourceStorageService.store(result.inputStream)
@@ -99,26 +105,44 @@ class SmartDocumentsClient(
     private fun postDepositForFiles(
         authentication: SmartDocumentsAuthentication,
         smartDocumentsRequest: SmartDocumentsRequest,
+        payloadFormat: PayloadFormatOption,
     ): FilesResponse =
-        restClient(authentication)
-            .post()
-            .uri { it.pathSegment("wsxmldeposit", "deposit", "unattended").build() }
-            .contentType(APPLICATION_JSON_UTF8)
-            .body(smartDocumentsRequest)
+        depositRequest(authentication, smartDocumentsRequest, payloadFormat)
             .retrieve()
             .body<FilesResponse>()!!
 
     private fun postDepositForResource(
         authentication: SmartDocumentsAuthentication,
         smartDocumentsRequest: SmartDocumentsRequest,
+        payloadFormat: PayloadFormatOption,
     ): Resource =
-        restClient(authentication)
-            .post()
-            .uri { it.pathSegment("wsxmldeposit", "deposit", "unattended").build() }
-            .contentType(APPLICATION_JSON_UTF8)
-            .body(smartDocumentsRequest)
+        depositRequest(authentication, smartDocumentsRequest, payloadFormat)
             .retrieve()
             .body<Resource>()!!
+
+    private fun depositRequest(
+        authentication: SmartDocumentsAuthentication,
+        smartDocumentsRequest: SmartDocumentsRequest,
+        payloadFormat: PayloadFormatOption,
+    ): RequestBodySpec {
+        val request =
+            restClient(authentication)
+                .post()
+                .uri { it.pathSegment("wsxmldeposit", "deposit", "unattended").build() }
+        return when (payloadFormat) {
+            PayloadFormatOption.JSON ->
+                request
+                    .contentType(APPLICATION_JSON_UTF8)
+                    .body(smartDocumentsRequest)
+            PayloadFormatOption.XML -> {
+                val xml = SmartDocumentsXmlRequestWriter.write(smartDocumentsRequest)
+                request
+                    .contentType(APPLICATION_XML_UTF8)
+                    .accept(MediaType.APPLICATION_JSON)
+                    .body(xml.toByteArray(StandardCharsets.UTF_8))
+            }
+        }
+    }
 
     // Fallback for older SmartDocuments versions that reject an existing templateGroup.
     // Newer versions (2026.2.x+) validate the templateGroup, so we only apply this on a 400.
@@ -207,5 +231,6 @@ class SmartDocumentsClient(
 
     companion object {
         private val xmlMapper = XmlMapper()
+        private val APPLICATION_XML_UTF8 = MediaType("application", "xml", StandardCharsets.UTF_8)
     }
 }

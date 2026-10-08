@@ -16,10 +16,14 @@
 
 package com.ritense.valtimoplugins.smartdocuments.plugin
 
+import com.ritense.document.domain.Document
 import com.ritense.processdocument.service.DocumentDelegateService
 import com.ritense.resource.service.TemporaryResourceStorageService
 import com.ritense.valtimoplugins.smartdocuments.client.SmartDocumentsClient
+import com.ritense.valtimoplugins.smartdocuments.domain.DocumentFormatOption
 import com.ritense.valtimoplugins.smartdocuments.domain.DocumentsStructure
+import com.ritense.valtimoplugins.smartdocuments.domain.FileStreamResponse
+import com.ritense.valtimoplugins.smartdocuments.domain.PayloadFormatOption
 import com.ritense.valtimoplugins.smartdocuments.domain.SmartDocumentsTemplateData
 import com.ritense.valtimoplugins.smartdocuments.domain.Template
 import com.ritense.valtimoplugins.smartdocuments.domain.TemplateGroup
@@ -28,15 +32,21 @@ import com.ritense.valueresolver.ValueResolverService
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.api.extension.ExtendWith
 import org.mockito.InjectMocks
 import org.mockito.Mock
 import org.mockito.junit.jupiter.MockitoExtension
 import org.mockito.kotlin.any
+import org.mockito.kotlin.anyOrNull
+import org.mockito.kotlin.eq
 import org.mockito.kotlin.mock
+import org.mockito.kotlin.never
+import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import org.operaton.bpm.engine.delegate.DelegateExecution
 import org.springframework.context.ApplicationEventPublisher
+import java.io.ByteArrayInputStream
 
 const val TEMPLATE_NAME_LIST = "templateNameList"
 const val TEMPLATE_GROUP_NAME = "Group 1"
@@ -115,6 +125,65 @@ internal class SmartDocumentsPluginTest {
         assertThat(result).isEmpty()
     }
 
+    @Test
+    fun `should generate the document with an XML payload when payload format is XML`() {
+        givenGenerateDocumentMocks()
+
+        generate(payloadFormat = "XML")
+
+        verify(
+            smartDocumentsClient,
+        ).generateDocumentStream(any(), any(), eq(DocumentFormatOption.PDF), eq(PayloadFormatOption.XML))
+        assertThat(delegateExecution.getVariable("generatedDocument")).isEqualTo("resource-id")
+    }
+
+    @Test
+    fun `should generate the document with a JSON payload when no payload format is configured`() {
+        givenGenerateDocumentMocks()
+
+        generate(payloadFormat = null)
+
+        verify(
+            smartDocumentsClient,
+        ).generateDocumentStream(any(), any(), eq(DocumentFormatOption.PDF), eq(PayloadFormatOption.JSON))
+    }
+
+    @Test
+    fun `should fail before calling SmartDocuments when the payload format is unknown`() {
+        assertThrows<IllegalArgumentException> { generate(payloadFormat = "YAML") }
+
+        verify(smartDocumentsClient, never()).generateDocumentStream(any(), any(), any(), any())
+    }
+
+    private fun givenGenerateDocumentMocks() {
+        val document = mock<Document>()
+        whenever(document.id()).thenReturn(mock())
+        whenever(documentDelegateService.getDocument(any<DelegateExecution>())).thenReturn(document)
+        whenever(valueResolverService.resolveValues(anyOrNull(), any(), any())).thenReturn(
+            mapOf(
+                "doc:/toelichting" to "regel 1\nregel 2",
+            ),
+        )
+        whenever(smartDocumentsClient.generateDocumentStream(any(), any(), any(), any()))
+            .thenReturn(FileStreamResponse("brief.pdf", "pdf", ByteArrayInputStream("pdf".toByteArray())))
+        whenever(temporaryResourceStorageService.store(any(), any())).thenReturn("resource-id")
+    }
+
+    private fun generate(payloadFormat: String?) {
+        smartDocumentsPlugin.url = "http://localhost"
+        smartDocumentsPlugin.username = "username"
+        smartDocumentsPlugin.password = "password"
+        smartDocumentsPlugin.generate(
+            execution = delegateExecution,
+            templateGroup = TEMPLATE_GROUP_NAME,
+            templateName = TEMPLATE_NAME,
+            format = "PDF",
+            templateData = arrayOf(TemplateDataEntry("toelichting", "doc:/toelichting")),
+            resultingDocumentProcessVariableName = "generatedDocument",
+            payloadFormat = payloadFormat,
+        )
+    }
+
     private fun smartDocumentsTemplateData() =
         SmartDocumentsTemplateData(
             DocumentsStructure(
@@ -159,7 +228,8 @@ internal class SmartDocumentsPluginTest {
 
     private fun delegateExecution(): DelegateExecution {
         val variables = mutableMapOf<String, Any?>()
-        val execution = mock<DelegateExecution>()
+        val execution = mock<DelegateExecution>(lenient = true)
+        whenever(execution.processInstanceId).thenReturn("process-instance-id")
         whenever(execution.setVariable(any(), any())).thenAnswer { invocation ->
             variables[invocation.arguments[0] as String] = invocation.arguments[1]
         }

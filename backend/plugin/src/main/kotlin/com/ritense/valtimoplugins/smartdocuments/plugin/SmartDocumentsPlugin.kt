@@ -32,6 +32,7 @@ import com.ritense.valtimoplugins.smartdocuments.client.SmartDocumentsClient
 import com.ritense.valtimoplugins.smartdocuments.config.SmartDocumentsAuthentication
 import com.ritense.valtimoplugins.smartdocuments.domain.DocumentFormatOption
 import com.ritense.valtimoplugins.smartdocuments.domain.FileStreamResponse
+import com.ritense.valtimoplugins.smartdocuments.domain.PayloadFormatOption
 import com.ritense.valtimoplugins.smartdocuments.domain.SmartDocumentsRequest
 import com.ritense.valtimoplugins.smartdocuments.domain.TemplateGroup
 import com.ritense.valueresolver.ValueResolverService
@@ -76,7 +77,9 @@ class SmartDocumentsPlugin(
         @PluginActionProperty format: String,
         @PluginActionProperty templateData: Array<TemplateDataEntry>,
         @PluginActionProperty resultingDocumentProcessVariableName: String,
+        @PluginActionProperty payloadFormat: String? = null,
     ) {
+        val resolvedPayloadFormat = PayloadFormatOption.from(payloadFormat)
         val document =
             runWithoutAuthorization {
                 documentDelegateService.getDocument(execution)
@@ -88,6 +91,7 @@ class SmartDocumentsPlugin(
                 templateName,
                 resolvedTemplateData,
                 DocumentFormatOption.valueOf(format),
+                resolvedPayloadFormat,
             )
         publishDossierDocumentGeneratedEvent(document.id(), templateName)
         val resourceId =
@@ -175,6 +179,7 @@ class SmartDocumentsPlugin(
         templateName: String,
         templateData: Map<String, Any?>,
         format: DocumentFormatOption,
+        payloadFormat: PayloadFormatOption,
     ): FileStreamResponse {
         val request =
             SmartDocumentsRequest(
@@ -187,7 +192,7 @@ class SmartDocumentsPlugin(
                 ),
             )
         val authentication = SmartDocumentsAuthentication(url, username, password)
-        return smartDocumentsClient.generateDocumentStream(authentication, request, format)
+        return smartDocumentsClient.generateDocumentStream(authentication, request, format, payloadFormat)
     }
 
     private fun resolveTemplateData(

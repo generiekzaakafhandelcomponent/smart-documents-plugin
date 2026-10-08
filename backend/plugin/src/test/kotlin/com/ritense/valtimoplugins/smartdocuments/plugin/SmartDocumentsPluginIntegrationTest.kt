@@ -16,6 +16,7 @@
 
 package com.ritense.valtimoplugins.smartdocuments.plugin
 
+import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.node.ObjectNode
 import com.ritense.authorization.AuthorizationContext.Companion.runWithoutAuthorization
 import com.ritense.document.domain.impl.request.NewDocumentRequest
@@ -234,6 +235,64 @@ class SmartDocumentsPluginIntegrationTest
         }
 
         @Test
+        fun `should send the template data as XML with xml space preserve when payload format is XML`() {
+            // given
+            saveProcessLink(
+                """
+                {
+                    "templateGroup": "test-template-group",
+                    "templateName": "test-template-name",
+                    "format": "XML",
+                    "templateData": [
+                        { "key": "achternaam", "value": "doc:/lastname" },
+                        { "key": "toelichting", "value": "pv:toelichting" }
+                    ],
+                    "resultingDocumentProcessVariableName": "my-generated-document",
+                    "payloadFormat": "XML"
+                }
+                """.trimIndent(),
+            )
+
+            // when
+            startProcess(
+                objectMapper.readTree("{\"lastname\": \"Klaveren\"}"),
+                mapOf("toelichting" to "Regel 1\nRegel 2"),
+            )
+
+            // then
+            val request = findRequest(HttpMethod.POST, "/wsxmldeposit/deposit/unattended")!!
+            assertThat(request.getHeader("Content-Type")).isEqualTo("application/xml;charset=UTF-8")
+            val body = request.body.readUtf8()
+            assertThat(body).contains("<achternaam>Klaveren</achternaam>")
+            assertThat(body).contains("<toelichting xml:space=\"preserve\">Regel 1\nRegel 2</toelichting>")
+            assertThat(body).contains("<TemplateGroup>test-template-group</TemplateGroup>")
+        }
+
+        @Test
+        fun `should resolve the payload format from a process variable`() {
+            // given
+            saveProcessLink(
+                """
+                {
+                    "templateGroup": "test-template-group",
+                    "templateName": "test-template-name",
+                    "format": "XML",
+                    "templateData": [],
+                    "resultingDocumentProcessVariableName": "my-generated-document",
+                    "payloadFormat": "pv:payloadFormat"
+                }
+                """.trimIndent(),
+            )
+
+            // when
+            startProcess(objectMapper.createObjectNode(), mapOf("payloadFormat" to "XML"))
+
+            // then
+            val request = findRequest(HttpMethod.POST, "/wsxmldeposit/deposit/unattended")!!
+            assertThat(request.getHeader("Content-Type")).isEqualTo("application/xml;charset=UTF-8")
+        }
+
+        @Test
         fun `should throw error when template-name contains process-variable that doesn't exist`() {
             // given
             saveProcessLink(
@@ -265,6 +324,19 @@ class SmartDocumentsPluginIntegrationTest
             // then
             assertThat(result.errors()).hasSize(1)
             assertThat(result.errors()[0].asString()).startsWith("Unexpected error occurred, please contact support")
+        }
+
+        private fun startProcess(
+            documentContent: JsonNode,
+            processVars: Map<String, Any>,
+        ) {
+            val request =
+                NewDocumentAndStartProcessRequest(
+                    PROCESS_DEFINITION_KEY,
+                    NewDocumentRequest(DOCUMENT_DEFINITION_KEY, "profile", "1.0.0", documentContent),
+                ).withProcessVars(processVars)
+            val result = runWithoutAuthorization { processDocumentService.newDocumentAndStartProcess(request) }
+            assertThat(result.errors()).isEmpty()
         }
 
         private fun saveProcessLink(generateDocumentActionProperties: String) {
