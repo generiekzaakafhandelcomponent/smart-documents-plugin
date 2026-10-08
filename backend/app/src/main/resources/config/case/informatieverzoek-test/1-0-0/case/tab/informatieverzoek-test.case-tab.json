@@ -1,0 +1,26 @@
+[
+    {
+        "key": "summary",
+        "name": "Summary",
+        "type": "widgets",
+        "contentKey": "-"
+    },
+    {
+        "key": "documents",
+        "name": "Documents",
+        "type": "standard",
+        "contentKey": "documents"
+    },
+    {
+        "key": "progress",
+        "name": "Progress",
+        "type": "standard",
+        "contentKey": "progress"
+    },
+    {
+        "key": "audit",
+        "name": "Audit",
+        "type": "standard",
+        "contentKey": "audit"
+    }
+]

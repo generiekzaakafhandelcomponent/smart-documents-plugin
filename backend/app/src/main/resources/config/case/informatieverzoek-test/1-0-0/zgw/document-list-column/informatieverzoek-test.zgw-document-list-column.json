@@ -1,0 +1,15 @@
+[
+    {
+        "key": "TITEL"
+    },
+    {
+        "key": "BESTANDSNAAM"
+    },
+    {
+        "key": "BESTANDSOMVANG"
+    },
+    {
+        "key": "CREATIEDATUM",
+        "defaultSort": "DESC"
+    }
+]
