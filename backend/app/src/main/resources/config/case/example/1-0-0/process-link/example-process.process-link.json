@@ -46,6 +46,14 @@
                     "value": "doc:/name"
                 },
                 {
+                    "key": "message",
+                    "value": "doc:/message"
+                },
+                {
+                    "key": "opgevraagdeStukken",
+                    "value": "doc:/opgevraagdeStukken"
+                },
+                {
                     "key": "templateGroup",
                     "value": "doc:/templateGroup"
                 },
@@ -54,7 +62,8 @@
                     "value": "Hello from the SmartDocuments example case"
                 }
             ],
-            "resultingDocumentProcessVariableName": "generatedDocumentResourceId"
+            "resultingDocumentProcessVariableName": "generatedDocumentResourceId",
+            "payloadFormat": "doc:/payloadFormat"
         }
     },
     {

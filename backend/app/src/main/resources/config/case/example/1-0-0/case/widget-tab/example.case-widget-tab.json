@@ -21,6 +21,15 @@
                                 }
                             },
                             {
+                                "key": "message",
+                                "title": "Message",
+                                "value": "doc:/message",
+                                "displayProperties": {
+                                    "type": "text",
+                                    "hideWhenEmpty": false
+                                }
+                            },
+                            {
                                 "key": "templateGroup",
                                 "title": "Template group",
                                 "value": "doc:/templateGroup",
@@ -42,6 +51,15 @@
                                 "key": "format",
                                 "title": "Document format",
                                 "value": "doc:/format",
+                                "displayProperties": {
+                                    "type": "text",
+                                    "hideWhenEmpty": false
+                                }
+                            },
+                            {
+                                "key": "payloadFormat",
+                                "title": "Payload format",
+                                "value": "doc:/payloadFormat",
                                 "displayProperties": {
                                     "type": "text",
                                     "hideWhenEmpty": false

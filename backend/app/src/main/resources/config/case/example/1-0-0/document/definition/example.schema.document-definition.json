@@ -8,6 +8,25 @@
             "type": "string",
             "description": "Name, sent to SmartDocuments as template data"
         },
+        "message": {
+            "type": "string",
+            "description": "Free text, sent to SmartDocuments as template data"
+        },
+        "opgevraagdeStukken": {
+            "type": "array",
+            "description": "Requested documents, sent to SmartDocuments as a list",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "omschrijving": {
+                        "type": "string"
+                    },
+                    "toelichting": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
         "templateGroup": {
             "type": "string",
             "description": "SmartDocuments template group"
@@ -25,6 +44,14 @@
                 "XML"
             ],
             "description": "Format of the generated document"
+        },
+        "payloadFormat": {
+            "type": "string",
+            "enum": [
+                "JSON",
+                "XML"
+            ],
+            "description": "Payload format of the generate-document action"
         },
         "templateNames": {
             "type": "array",
