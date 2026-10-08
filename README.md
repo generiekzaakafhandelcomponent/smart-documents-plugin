@@ -13,6 +13,8 @@ the same plugin key (`smartdocuments`), so existing plugin configurations and pr
 
 - **Generate document** (`generate-document`): generates a document (DOCX, HTML, PDF or XML) from a SmartDocuments
   template, filled with data from the case.
+- **Keep line breaks**: set the payload format of `generate-document` to `XML` to keep line breaks in text values. See
+  the [plugin documentation](documentation/plugin.md#keeping-line-breaks-payload-format-xml).
 - **Get template names** (`get-template-names`): fetches the template names of a template group and stores them as a
   list in a process variable.
 

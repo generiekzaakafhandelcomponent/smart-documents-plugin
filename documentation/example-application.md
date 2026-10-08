@@ -66,9 +66,12 @@ HTML and XML files. The autodeployed plugin configuration (`SmartDocuments (Auto
    | Field          | Example value      | Notes                                                       |
    |----------------|--------------------|-------------------------------------------------------------|
    | Name           | `Jane`             | Sent to SmartDocuments as template data (key `name`)        |
+   | Message        | (prefilled dummy text) | Free text, sent as template data (key `message`). An empty line starts a new paragraph |
    | Template group | `Example`          | The mock has `Example` and the nested group `Letters`       |
    | Template name  | `Example template` | `Letters` has `Confirmation letter` and `Rejection letter`  |
    | Format         | `PDF`              | `DOCX`, `PDF`, `HTML` or `XML`                              |
+   | Requested documents | (prefilled list) | A list, sent as template data (key `opgevraagdeStukken`). The explanation can have line breaks |
+   | Payload format | `JSON`             | Choose `XML` to keep the line breaks of the message and the explanations in the document |
 
 3. The process runs these service tasks:
 
@@ -96,6 +99,9 @@ Open `http://localhost:8099`:
   in `backend/app/imports/smartdocuments-mock/data/` (ignored by git); **Reset to defaults** removes them. The defaults
   are in `backend/app/imports/smartdocuments-mock/templates.json`.
 - **Settings**: simulate a `400`, `401` or `500` response, for the next request or for all requests, or add a delay.
+  **Simulate SmartDocuments whitespace handling** (on by default) makes the mock lose line breaks like SmartDocuments
+  does: in JSON values, and in XML values without `xml:space="preserve"`. The Requests tab shows which values kept or lost
+  their line breaks, and the raw request body.
   The service tasks run when the case starts, so a SmartDocuments error makes starting the case fail.
 
 The mock checks basic auth (`valtimo` / `valtimo`) and returns `400` for a template group or template that doesn't
@@ -111,7 +117,37 @@ VALTIMO_SMART_DOCUMENTS_USERNAME=...
 VALTIMO_SMART_DOCUMENTS_PASSWORD=...
 ```
 
-The plugin configuration is only created on the first start. If it already exists, change it in **Admin → Plugins**.
+The plugin configuration is deployed again on every start of the backend. A change you make in **Admin → Plugins** is
+overwritten on the next restart, so use the variables above.
+
+### Test with a SmartDocuments test environment
+
+The case **Informatieverzoek (test)** generates a real letter in a SmartDocuments test environment, with the data of an
+information request. It uses its own plugin configuration, **SmartDocuments (test environment)**, so the
+Example case keeps using the mock.
+
+1. Add the URL and credentials of the test environment to `.env.properties` in the project root. Git ignores this file.
+
+   ```properties
+   VALTIMO_SMART_DOCUMENTS_TEST_URL=https://<smartdocuments-test-host>
+   VALTIMO_SMART_DOCUMENTS_TEST_USERNAME=<integration user>
+   VALTIMO_SMART_DOCUMENTS_TEST_PASSWORD=<password>
+   ```
+
+   `./gradlew :backend:app:bootRun` reads this file. If you start the backend from your IDE, set the variables in the run
+   configuration. Without them the configuration still deploys, but generating a letter fails.
+2. Restart the backend.
+3. Go to **Cases → Informatieverzoek (test)** and start a case. The start form is prefilled with an example request.
+   Enter the template group and template of your SmartDocuments environment; the defaults (`Sociaal domein` /
+   `Informatieverzoek`) exist in the local mock. The requested item has
+   a multi-line *toelichting*.
+4. Choose the payload format and start the case. The process creates a zaak, generates the letter, stores it in the
+   Documenten API and links it to the zaak.
+5. Open the letter in the **Documents** tab. Start a second case with the other payload format to compare: with `XML` the
+   lines of the *toelichting* stay on separate lines, with `JSON` they run together.
+
+The template data keys are `zaaknummer`, `gegevensAanvrager`, `gegevensPartner`, `verzendadres`, `verzenddatum`,
+`datumAanvraag`, `deadlineInformatieverzoek`, `opgevraagdeStukken` and `hersteltermijn`.
 
 ### ZGW services
 
