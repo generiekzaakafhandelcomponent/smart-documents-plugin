@@ -82,7 +82,8 @@ services:
       - SMARTDOCUMENTS_USERNAME=valtimo
       - SMARTDOCUMENTS_PASSWORD=valtimo
     ports:
-      - "8099:8080"
+      # Only on localhost: the mock UI and API have no login and show the template data of every request
+      - "127.0.0.1:8099:8080"
     volumes:
       - ./imports/smartdocuments-mock:/app
     healthcheck:
@@ -92,7 +93,7 @@ services:
       retries: 6
 
   # ZGW
-  # Based on the setup of gzac-alo-ut-backend. The ZGW services share the network of the 'localhost' container, so they
+  # The ZGW services share the network of the 'localhost' container, so they
   # reach each other (and Valtimo reaches them) on localhost:<port>. The ports are published by the 'localhost' container.
 
   localhost:

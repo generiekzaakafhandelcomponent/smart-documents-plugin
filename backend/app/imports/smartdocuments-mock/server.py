@@ -36,6 +36,7 @@ import re
 import threading
 import time
 import uuid
+import xml.etree.ElementTree as ET
 import zipfile
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
@@ -62,7 +63,9 @@ CONTENT_TYPES = {
 lock = threading.Lock()
 request_log = []  # newest first
 generated_files = {}  # request id -> {format: (filename, bytes)}
-settings = {"failureStatus": None, "failureOnce": True, "delayMs": 0}
+settings = {"failureStatus": None, "failureOnce": True, "delayMs": 0, "simulateWhitespace": True}
+XML_SPACE = "{http://www.w3.org/XML/1998/namespace}space"
+MAX_RAW_BODY = 100_000
 
 
 # --------------------------------------------------------------------------------------------------------------------
@@ -105,6 +108,61 @@ def validate_templates(templates):
 
     for g in templates["groups"]:
         check(g, "")
+
+
+# --------------------------------------------------------------------------------------------------------------------
+# Request parsing
+# --------------------------------------------------------------------------------------------------------------------
+
+def collapse_whitespace(text):
+    """SmartDocuments turns the request into XML and XML ignores whitespace, so line breaks are lost."""
+    return re.sub(r"\s+", " ", text).strip()
+
+
+def simulate_json_whitespace(value, path, lost):
+    if isinstance(value, str):
+        if "\n" in value or "\r" in value:
+            lost.append(path)
+        return collapse_whitespace(value)
+    if isinstance(value, dict):
+        return {k: simulate_json_whitespace(v, f"{path}.{k}" if path else k, lost) for k, v in value.items()}
+    if isinstance(value, list):
+        return [simulate_json_whitespace(v, f"{path}[{i}]", lost) for i, v in enumerate(value)]
+    return value
+
+
+def xml_to_value(element, path, simulate, kept, lost):
+    children = list(element)
+    if not children:
+        if element.text is None:
+            return None
+        text = element.text.replace("\r\n", "\n")
+        has_line_break = "\n" in text
+        if element.get(XML_SPACE) == "preserve":
+            if has_line_break:
+                kept.append(path)
+            return text
+        if has_line_break:
+            lost.append(path)
+        return collapse_whitespace(text) if simulate else text
+    if all(child.tag == "item" for child in children):
+        return [xml_to_value(c, f"{path}[{i}]", simulate, kept, lost) for i, c in enumerate(children)]
+    return {c.tag: xml_to_value(c, f"{path}.{c.tag}" if path else c.tag, simulate, kept, lost) for c in children}
+
+
+def parse_xml_request(raw, simulate):
+    """Returns (customerData, templateGroup, template, kept, lost). Raises ValueError for an invalid request."""
+    try:
+        root = ET.fromstring(raw)
+    except ET.ParseError as e:
+        raise ValueError(f"The request body is not valid XML: {e}")
+    customer_data = root.find("customerData")
+    selection = root.find("SmartDocument/Selection")
+    if customer_data is None or selection is None:
+        raise ValueError("The XML request needs <customerData> and <SmartDocument><Selection> elements")
+    kept, lost = [], []
+    data = {c.tag: xml_to_value(c, c.tag, simulate, kept, lost) for c in customer_data}
+    return data, selection.findtext("TemplateGroup"), selection.findtext("Template"), kept, lost
 
 
 def find_group(groups, name):
@@ -161,11 +219,21 @@ PLACEHOLDER = re.compile(r"\{\{\s*([\w.\-]+)\s*\}\}")
 def value_to_text(value):
     if value is None:
         return ""
-    if isinstance(value, (dict, list)):
-        return json.dumps(value, ensure_ascii=False)
+    if isinstance(value, list):
+        # Each item becomes its own paragraph in the document
+        return "\n\n".join(value_to_text(item) for item in value)
+    if isinstance(value, dict):
+        return "\n".join(f"{key}: {field_text(item)}" for key, item in value.items())
     if isinstance(value, bool):
         return "true" if value else "false"
     return str(value)
+
+
+def field_text(value):
+    """A list of plain values inside an object is written on one line, separated by commas."""
+    if isinstance(value, list) and all(not isinstance(item, (dict, list)) for item in value):
+        return ", ".join(value_to_text(item) for item in value)
+    return value_to_text(value)
 
 
 def lookup(data, key):
@@ -512,7 +580,8 @@ class Handler(BaseHTTPRequestHandler):
         return {"id": uuid.uuid4().hex[:12], "time": datetime.datetime.now().isoformat(timespec="seconds"),
                 "method": self.command, "path": self.path, "user": user, "durationMs": None, "status": None,
                 "templateGroup": None, "template": None, "customerData": None, "message": None, "files": [],
-                "missingPlaceholders": [], "started": started}
+                "missingPlaceholders": [], "payloadFormat": None, "rawBody": None, "keptLineBreaks": [],
+                "lostLineBreaks": [], "started": started}
 
     def finish_entry(self, entry, status, message=None):
         entry["status"] = status
@@ -576,6 +645,7 @@ class Handler(BaseHTTPRequestHandler):
                 settings["failureStatus"] = int(status) if status else None
                 settings["failureOnce"] = bool(data.get("failureOnce", True))
                 settings["delayMs"] = max(0, min(int(data.get("delayMs") or 0), 120000))
+                settings["simulateWhitespace"] = bool(data.get("simulateWhitespace", True))
                 return self.send_json(200, {**settings, "username": USERNAME, "password": PASSWORD})
         self.send(404, error_page(404, "Not found"), "text/html; charset=utf-8")
 
@@ -616,20 +686,41 @@ class Handler(BaseHTTPRequestHandler):
     def handle_generate(self):
         entry = self.new_entry(None, time.time())
         raw = self.read_body()
-        try:
-            request = json.loads(raw or b"{}")
-        except json.JSONDecodeError:
-            request = None
-        if isinstance(request, dict):
-            selection = (request.get("SmartDocument") or {}).get("Selection") or {}
-            entry["templateGroup"] = selection.get("TemplateGroup")
-            entry["template"] = selection.get("Template")
-            entry["customerData"] = request.get("customerData") or {}
+        is_xml = "xml" in (self.headers.get("Content-Type") or "").lower()
+        entry["payloadFormat"] = "XML" if is_xml else "JSON"
+        entry["rawBody"] = raw[:MAX_RAW_BODY].decode("utf-8", errors="replace")
+        with lock:
+            simulate = settings["simulateWhitespace"]
+        error = None
+        if is_xml:
+            try:
+                data, group_name, template_name, kept, lost = parse_xml_request(raw, simulate)
+                entry.update(templateGroup=group_name, template=template_name, customerData=data,
+                             keptLineBreaks=kept, lostLineBreaks=lost)
+            except ValueError as e:
+                error = str(e)
+        else:
+            try:
+                request = json.loads(raw or b"{}")
+                if not isinstance(request, dict):
+                    raise ValueError
+                selection = (request.get("SmartDocument") or {}).get("Selection") or {}
+                lost = []
+                data = request.get("customerData") or {}
+                if simulate:
+                    data = simulate_json_whitespace(data, "", lost)
+                else:
+                    simulate_json_whitespace(data, "", lost)
+                entry.update(templateGroup=selection.get("TemplateGroup"), template=selection.get("Template"),
+                             customerData=data, lostLineBreaks=lost)
+            except ValueError:
+                error = "The request body is not valid JSON"
         if not self.check_access(entry):
             return
-        if not isinstance(request, dict):
-            self.send(400, error_page(400, "INVALID_JSON: the request body is not valid JSON"), "text/html; charset=utf-8")
-            return self.finish_entry(entry, 400, "The request body is not valid JSON")
+        if error:
+            code = "INVALID_XML" if is_xml else "INVALID_JSON"
+            self.send(400, error_page(400, f"{code}: {error}"), "text/html; charset=utf-8")
+            return self.finish_entry(entry, 400, error)
 
         group = find_group(load_templates()["groups"], entry["templateGroup"])
         template = next((t for t in (group or {}).get("templates", []) if t.get("name") == entry["template"]), None)
