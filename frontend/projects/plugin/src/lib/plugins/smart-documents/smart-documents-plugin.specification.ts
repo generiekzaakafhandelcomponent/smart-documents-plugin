@@ -48,6 +48,13 @@ const smartDocumentsPluginSpecification: PluginSpecification = {
       templateDataTooltip:
         'De rechter value-kolom ondersteunt ook het gebruik van procesvariabelen zoals pv: en doc:',
       format: 'Documentformaat',
+      formatTooltip:
+        'Kies een vaste waarde, of Value resolver om het formaat uit de case of het proces te halen, bijvoorbeeld doc:/format of pv:format.',
+      fixedValue: 'Vaste waarde',
+      valueResolver: 'Value resolver',
+      payloadFormat: 'Payloadformaat',
+      payloadFormatTooltip:
+        'Kies XML om enters in tekstvelden te behouden. Met Value resolver komt de waarde uit de case of het proces, bijvoorbeeld doc:/payloadFormat of pv:payloadFormat.',
       templateData: 'Template-data',
       resultingDocumentProcessVariableName: 'Naam procesvariabele voor opslag document',
       resultingDocumentProcessVariableNameTooltip:
@@ -74,6 +81,13 @@ const smartDocumentsPluginSpecification: PluginSpecification = {
       resultingTemplateNameListProcessVariableName: 'Name of process variable to save the list in',
 
       format: 'Document format',
+      formatTooltip:
+        'Choose a fixed value, or Value resolver to take the format from the case or the process, for example doc:/format or pv:format.',
+      fixedValue: 'Fixed value',
+      valueResolver: 'Value resolver',
+      payloadFormat: 'Payload format',
+      payloadFormatTooltip:
+        'Choose XML to keep line breaks in text fields. With Value resolver the value comes from the case or the process, for example doc:/payloadFormat or pv:payloadFormat.',
       templateData: 'Template data',
       templateDataTooltip:
         'The right value-column also supports the use of process variables such as pv: and doc:',

@@ -24,6 +24,7 @@ import {
   SelectModule,
   CarbonMultiInputModule,
   ParagraphModule,
+  RadioModule,
 } from '@valtimo/components';
 import {GenerateDocumentConfigurationComponent} from './components/generate-document-configuration/generate-document-configuration.component';
 import {GetTemplateNamesComponent} from './components/get-template-names/get-template-names.component';
@@ -42,6 +43,7 @@ import {GetTemplateNamesComponent} from './components/get-template-names/get-tem
     SelectModule,
     CarbonMultiInputModule,
     ParagraphModule,
+    RadioModule,
   ],
   exports: [
     SmartDocumentsConfigurationComponent,

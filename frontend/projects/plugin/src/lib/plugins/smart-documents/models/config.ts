@@ -24,12 +24,15 @@ interface SmartDocumentsConfig extends PluginConfigurationData {
 
 type DocumentFormat = 'DOCX' | 'PDF' | 'XML' | 'HTML';
 
+type PayloadFormat = 'JSON' | 'XML';
+
 interface GenerateDocumentConfig {
   templateGroup: string;
   templateName: string;
   resultingDocumentProcessVariableName: string;
   format: DocumentFormat;
   templateData: Array<{key: string; value: string}>;
+  payloadFormat?: PayloadFormat;
 }
 
 interface GetTemplateNamesConfig {
@@ -37,4 +40,10 @@ interface GetTemplateNamesConfig {
   resultingTemplateNameListProcessVariableName: string;
 }
 
-export {SmartDocumentsConfig, GenerateDocumentConfig, GetTemplateNamesConfig, DocumentFormat};
+export {
+  SmartDocumentsConfig,
+  GenerateDocumentConfig,
+  GetTemplateNamesConfig,
+  DocumentFormat,
+  PayloadFormat,
+};

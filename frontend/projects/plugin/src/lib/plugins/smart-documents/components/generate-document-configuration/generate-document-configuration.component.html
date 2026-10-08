@@ -58,16 +58,76 @@
     placeholder=""
   >
   </v-input>
+  <!-- Each field: a radio button to choose a fixed value (dropdown) or a value resolver (text field). The dropdown and
+       the text field are always in the form and hidden with [style.display], not wrapped in an element: v-form only
+       finds its fields when they are direct children (@ContentChildren without descendants). -->
+  <v-radio
+    name="formatMode"
+    [title]="'format' | pluginTranslate: pluginId | async"
+    [tooltip]="'formatTooltip' | pluginTranslate: pluginId | async"
+    [radioValues]="[
+      {value: 'FIXED', title: ('fixedValue' | pluginTranslate: pluginId | async)},
+      {value: 'VALUE_RESOLVER', title: ('valueResolver' | pluginTranslate: pluginId | async)},
+    ]"
+    [defaultValue]="mode(obs.prefill?.format, FORMATS)"
+    [disabled]="obs.disabled"
+    [smallMargin]="true"
+  ></v-radio>
   <v-select
+    [style.display]="formatUsesValueResolver ? 'none' : null"
     [items]="FORMAT_SELECT_ITEMS"
     [margin]="true"
-    [widthInPx]="150"
-    name="format"
-    [title]="'format' | pluginTranslate: pluginId | async"
+    [widthInPx]="200"
+    name="formatSelect"
     [disabled]="obs.disabled"
-    [defaultSelectionId]="obs.prefill?.format"
-    [required]="true"
+    [defaultSelectionId]="fixedValue(obs.prefill?.format, FORMATS)"
+    [required]="!formatUsesValueResolver"
   ></v-select>
+  <v-input
+    [style.display]="formatUsesValueResolver ? null : 'none'"
+    name="formatValueResolver"
+    [margin]="true"
+    [defaultValue]="valueResolverPath(obs.prefill?.format, FORMATS)"
+    [disabled]="obs.disabled"
+    [required]="formatUsesValueResolver"
+    [trim]="true"
+    placeholder="doc:/format"
+  >
+  </v-input>
+
+  <v-radio
+    name="payloadFormatMode"
+    [title]="'payloadFormat' | pluginTranslate: pluginId | async"
+    [tooltip]="'payloadFormatTooltip' | pluginTranslate: pluginId | async"
+    [radioValues]="[
+      {value: 'FIXED', title: ('fixedValue' | pluginTranslate: pluginId | async)},
+      {value: 'VALUE_RESOLVER', title: ('valueResolver' | pluginTranslate: pluginId | async)},
+    ]"
+    [defaultValue]="mode(obs.prefill?.payloadFormat, PAYLOAD_FORMATS)"
+    [disabled]="obs.disabled"
+    [smallMargin]="true"
+  ></v-radio>
+  <v-select
+    [style.display]="payloadFormatUsesValueResolver ? 'none' : null"
+    [items]="PAYLOAD_FORMAT_SELECT_ITEMS"
+    [margin]="true"
+    [widthInPx]="200"
+    name="payloadFormatSelect"
+    [disabled]="obs.disabled"
+    [defaultSelectionId]="fixedValue(obs.prefill?.payloadFormat, PAYLOAD_FORMATS) || DEFAULT_PAYLOAD_FORMAT"
+    [clearable]="false"
+  ></v-select>
+  <v-input
+    [style.display]="payloadFormatUsesValueResolver ? null : 'none'"
+    name="payloadFormatValueResolver"
+    [margin]="true"
+    [defaultValue]="valueResolverPath(obs.prefill?.payloadFormat, PAYLOAD_FORMATS)"
+    [disabled]="obs.disabled"
+    [required]="payloadFormatUsesValueResolver"
+    [trim]="true"
+    placeholder="doc:/payloadFormat"
+  >
+  </v-input>
 
   <valtimo-carbon-multi-input
     name="templateData"
