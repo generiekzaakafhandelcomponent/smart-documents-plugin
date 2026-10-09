@@ -4,10 +4,10 @@
         "widgets": [
             {
                 "type": "fields",
-                "key": "process-variable-result",
-                "title": "Sample Plugin Result",
+                "key": "smartdocuments-input",
+                "title": "SmartDocuments input",
                 "width": 2,
-                "highContrast": true,
+                "highContrast": false,
                 "properties": {
                     "columns": [
                         [
@@ -30,9 +30,76 @@
                                 }
                             },
                             {
-                                "key": "apiResult",
-                                "title": "API Result",
-                                "value": "doc:/apiResult",
+                                "key": "templateGroup",
+                                "title": "Template group",
+                                "value": "doc:/templateGroup",
+                                "displayProperties": {
+                                    "type": "text",
+                                    "hideWhenEmpty": false
+                                }
+                            },
+                            {
+                                "key": "templateName",
+                                "title": "Template name",
+                                "value": "doc:/templateName",
+                                "displayProperties": {
+                                    "type": "text",
+                                    "hideWhenEmpty": false
+                                }
+                            },
+                            {
+                                "key": "format",
+                                "title": "Document format",
+                                "value": "doc:/format",
+                                "displayProperties": {
+                                    "type": "text",
+                                    "hideWhenEmpty": false
+                                }
+                            },
+                            {
+                                "key": "payloadFormat",
+                                "title": "Payload format",
+                                "value": "doc:/payloadFormat",
+                                "displayProperties": {
+                                    "type": "text",
+                                    "hideWhenEmpty": false
+                                }
+                            }
+                        ]
+                    ]
+                }
+            },
+            {
+                "type": "fields",
+                "key": "smartdocuments-result",
+                "title": "SmartDocuments result",
+                "width": 2,
+                "highContrast": true,
+                "properties": {
+                    "columns": [
+                        [
+                            {
+                                "key": "templateNames",
+                                "title": "Template names (get-template-names)",
+                                "value": "doc:/templateNames",
+                                "displayProperties": {
+                                    "type": "text",
+                                    "hideWhenEmpty": false
+                                }
+                            },
+                            {
+                                "key": "generatedDocumentResourceId",
+                                "title": "Generated document resource id (generate-document)",
+                                "value": "doc:/generatedDocumentResourceId",
+                                "displayProperties": {
+                                    "type": "text",
+                                    "hideWhenEmpty": false
+                                }
+                            },
+                            {
+                                "key": "storedDocumentUrl",
+                                "title": "Stored document (Documenten API)",
+                                "value": "doc:/storedDocumentUrl",
                                 "displayProperties": {
                                     "type": "text",
                                     "hideWhenEmpty": false

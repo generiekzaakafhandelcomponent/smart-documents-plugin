@@ -1,6 +1,6 @@
 spring:
   application:
-    name: gzac-plugin-template
+    name: smart-documents-plugin
   profiles:
     active: dev
   jackson:

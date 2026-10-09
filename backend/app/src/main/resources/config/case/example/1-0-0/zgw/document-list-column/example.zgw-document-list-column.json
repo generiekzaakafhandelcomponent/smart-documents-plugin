@@ -1,0 +1,18 @@
+[
+    {
+        "key": "TITEL"
+    },
+    {
+        "key": "BESTANDSNAAM"
+    },
+    {
+        "key": "INFORMATIEOBJECTTYPE_OMSCHRIJVING"
+    },
+    {
+        "key": "BESTANDSOMVANG"
+    },
+    {
+        "key": "CREATIEDATUM",
+        "defaultSort": "DESC"
+    }
+]

@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
+                  xmlns:camunda="http://camunda.org/schema/1.0/bpmn"
+                  xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
+                  xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
+                  id="Definitions_1"
+                  targetNamespace="http://bpmn.io/schema/bpmn"
+                  exporter="Camunda Modeler"
+                  exporterVersion="5.39.0">
+    <bpmn:collaboration id="Collaboration_1">
+        <bpmn:participant id="informatieverzoek-test-participant" name="Information request (test)" processRef="informatieverzoek-test-process"/>
+    </bpmn:collaboration>
+    <bpmn:process id="informatieverzoek-test-process" name="Information request (test)" isExecutable="true">
+        <bpmn:startEvent id="start-event" name="Information request started">
+            <bpmn:outgoing>Flow_1</bpmn:outgoing>
+        </bpmn:startEvent>
+        <bpmn:serviceTask id="create-zaak" name="Create zaak" camunda:expression="${null}">
+            <bpmn:incoming>Flow_1</bpmn:incoming>
+            <bpmn:outgoing>Flow_2</bpmn:outgoing>
+        </bpmn:serviceTask>
+        <bpmn:serviceTask id="generate-document" name="Generate letter with SmartDocuments" camunda:expression="${null}">
+            <bpmn:extensionElements>
+                <camunda:executionListener expression="${valueResolverDelegateService.handleValue(execution, 'doc:/generatedDocumentResourceId', execution.getVariable('generatedDocumentResourceId'))}" event="end"/>
+            </bpmn:extensionElements>
+            <bpmn:incoming>Flow_2</bpmn:incoming>
+            <bpmn:outgoing>Flow_3</bpmn:outgoing>
+        </bpmn:serviceTask>
+        <bpmn:serviceTask id="store-document" name="Store letter in Documenten API" camunda:expression="${null}">
+            <bpmn:extensionElements>
+                <camunda:executionListener expression="${valueResolverDelegateService.handleValue(execution, 'doc:/storedDocumentUrl', execution.getVariable('storedDocumentUrl'))}" event="end"/>
+            </bpmn:extensionElements>
+            <bpmn:incoming>Flow_3</bpmn:incoming>
+            <bpmn:outgoing>Flow_4</bpmn:outgoing>
+        </bpmn:serviceTask>
+        <bpmn:serviceTask id="link-document-to-zaak" name="Link letter to zaak" camunda:expression="${null}">
+            <bpmn:incoming>Flow_4</bpmn:incoming>
+            <bpmn:outgoing>Flow_5</bpmn:outgoing>
+        </bpmn:serviceTask>
+        <bpmn:endEvent id="end-event" name="Letter generated">
+            <bpmn:incoming>Flow_5</bpmn:incoming>
+        </bpmn:endEvent>
+        <bpmn:sequenceFlow id="Flow_1" sourceRef="start-event" targetRef="create-zaak"/>
+        <bpmn:sequenceFlow id="Flow_2" sourceRef="create-zaak" targetRef="generate-document"/>
+        <bpmn:sequenceFlow id="Flow_3" sourceRef="generate-document" targetRef="store-document"/>
+        <bpmn:sequenceFlow id="Flow_4" sourceRef="store-document" targetRef="link-document-to-zaak"/>
+        <bpmn:sequenceFlow id="Flow_5" sourceRef="link-document-to-zaak" targetRef="end-event"/>
+    </bpmn:process>
+    <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+        <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="Collaboration_1">
+            <bpmndi:BPMNShape id="Participant_1_di" bpmnElement="informatieverzoek-test-participant" isHorizontal="true">
+                <dc:Bounds x="160" y="100" width="904" height="200"/>
+            </bpmndi:BPMNShape>
+            <bpmndi:BPMNShape id="StartEvent_1_di" bpmnElement="start-event">
+                <dc:Bounds x="232" y="182" width="36" height="36"/>
+            </bpmndi:BPMNShape>
+            <bpmndi:BPMNShape id="ServiceTask_1_di" bpmnElement="create-zaak">
+                <dc:Bounds x="318" y="160" width="120" height="80"/>
+            </bpmndi:BPMNShape>
+            <bpmndi:BPMNShape id="ServiceTask_2_di" bpmnElement="generate-document">
+                <dc:Bounds x="478" y="160" width="120" height="80"/>
+            </bpmndi:BPMNShape>
+            <bpmndi:BPMNShape id="ServiceTask_3_di" bpmnElement="store-document">
+                <dc:Bounds x="638" y="160" width="120" height="80"/>
+            </bpmndi:BPMNShape>
+            <bpmndi:BPMNShape id="ServiceTask_4_di" bpmnElement="link-document-to-zaak">
+                <dc:Bounds x="798" y="160" width="120" height="80"/>
+            </bpmndi:BPMNShape>
+            <bpmndi:BPMNShape id="EndEvent_1_di" bpmnElement="end-event">
+                <dc:Bounds x="968" y="182" width="36" height="36"/>
+            </bpmndi:BPMNShape>
+            <bpmndi:BPMNEdge id="Flow_1_di" bpmnElement="Flow_1">
+                <di:waypoint x="268" y="200"/>
+                <di:waypoint x="318" y="200"/>
+            </bpmndi:BPMNEdge>
+            <bpmndi:BPMNEdge id="Flow_2_di" bpmnElement="Flow_2">
+                <di:waypoint x="438" y="200"/>
+                <di:waypoint x="478" y="200"/>
+            </bpmndi:BPMNEdge>
+            <bpmndi:BPMNEdge id="Flow_3_di" bpmnElement="Flow_3">
+                <di:waypoint x="598" y="200"/>
+                <di:waypoint x="638" y="200"/>
+            </bpmndi:BPMNEdge>
+            <bpmndi:BPMNEdge id="Flow_4_di" bpmnElement="Flow_4">
+                <di:waypoint x="758" y="200"/>
+                <di:waypoint x="798" y="200"/>
+            </bpmndi:BPMNEdge>
+            <bpmndi:BPMNEdge id="Flow_5_di" bpmnElement="Flow_5">
+                <di:waypoint x="918" y="200"/>
+                <di:waypoint x="968" y="200"/>
+            </bpmndi:BPMNEdge>
+        </bpmndi:BPMNPlane>
+    </bpmndi:BPMNDiagram>
+</bpmn:definitions>

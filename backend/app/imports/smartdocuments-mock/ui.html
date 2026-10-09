@@ -1,0 +1,468 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SmartDocuments mock</title>
+<style>
+:root {
+  --bg: #f4f5f8; --panel: #ffffff; --line: #e3e6ec; --text: #1d2433; --muted: #6b7385; --accent: #2f5bea;
+  --accent-soft: #e9eefd; --ok: #1a7f4b; --ok-soft: #e3f4ea; --warn: #9a6200; --warn-soft: #fdf1dc;
+  --err: #c0322b; --err-soft: #fbe6e5; --code: #f6f7f9; --shadow: 0 1px 2px rgba(16, 24, 40, .06);
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #12151c; --panel: #1a1e27; --line: #2b313d; --text: #e6e9ef; --muted: #98a0b0; --accent: #7c9cff;
+    --accent-soft: #232c45; --ok: #5fd39a; --ok-soft: #1b3328; --warn: #f0b85a; --warn-soft: #3a2f1a;
+    --err: #ff7b72; --err-soft: #3d1f1e; --code: #151922; --shadow: none; color-scheme: dark;
+  }
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+button, input, select, textarea { font: inherit; color: inherit; }
+header { background: var(--panel); border-bottom: 1px solid var(--line); padding: 14px 24px; display: flex; flex-wrap: wrap; gap: 12px 28px; align-items: center; }
+.brand { display: flex; align-items: center; gap: 10px; font-weight: 650; font-size: 16px; }
+.logo { width: 28px; height: 28px; border-radius: 7px; background: var(--accent); color: #fff; display: grid; place-items: center; font-size: 13px; font-weight: 700; }
+.meta { display: flex; flex-wrap: wrap; gap: 6px 18px; color: var(--muted); font-size: 13px; }
+.meta code { background: var(--code); border: 1px solid var(--line); padding: 1px 6px; border-radius: 5px; color: var(--text); }
+.live { margin-left: auto; display: flex; align-items: center; gap: 6px; color: var(--muted); font-size: 13px; }
+.dot { width: 8px; height: 8px; border-radius: 50%; background: var(--ok); }
+.dot.off { background: var(--err); }
+nav { display: flex; gap: 4px; padding: 0 24px; background: var(--panel); border-bottom: 1px solid var(--line); overflow-x: auto; }
+nav button { border: 0; background: none; padding: 11px 14px; cursor: pointer; color: var(--muted); border-bottom: 2px solid transparent; font-weight: 550; white-space: nowrap; }
+nav button.active { color: var(--accent); border-bottom-color: var(--accent); }
+nav .count { display: inline-block; min-width: 20px; padding: 0 6px; margin-left: 6px; border-radius: 10px; background: var(--accent-soft); color: var(--accent); font-size: 12px; }
+main { padding: 20px 24px 40px; }
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; box-shadow: var(--shadow); }
+.split { display: grid; grid-template-columns: minmax(260px, 360px) minmax(0, 1fr); gap: 16px; align-items: start; }
+.split > * { min-width: 0; }
+@media (max-width: 860px) { .split { grid-template-columns: 1fr; } }
+.toolbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding: 12px 14px; border-bottom: 1px solid var(--line); }
+.toolbar .title { font-weight: 650; margin-right: auto; }
+.btn { border: 1px solid var(--line); background: var(--panel); border-radius: 7px; padding: 6px 12px; cursor: pointer; font-weight: 550; }
+.btn:hover { border-color: var(--muted); }
+a.btn { display: inline-block; text-decoration: none; color: inherit; }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+.btn.danger { color: var(--err); }
+.btn.small { padding: 3px 9px; font-size: 12px; }
+.btn:disabled { opacity: .5; cursor: default; }
+.list { max-height: calc(100vh - 230px); overflow: auto; }
+.item { padding: 11px 14px; border-bottom: 1px solid var(--line); cursor: pointer; display: grid; gap: 3px; }
+.item:last-child { border-bottom: 0; }
+.item:hover { background: var(--code); }
+.item.selected { background: var(--accent-soft); }
+.item .row { display: flex; gap: 8px; align-items: center; }
+.item .label { font-weight: 600; margin-right: auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.item .sub { color: var(--muted); font-size: 12.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.badge { font-size: 12px; font-weight: 650; padding: 1px 8px; border-radius: 10px; white-space: nowrap; }
+.tag { font-size: 11px; font-weight: 650; padding: 0 6px; border-radius: 5px; border: 1px solid var(--line); color: var(--muted); }
+.s2 { background: var(--ok-soft); color: var(--ok); } .s4 { background: var(--warn-soft); color: var(--warn); } .s5 { background: var(--err-soft); color: var(--err); }
+.empty { padding: 40px 20px; text-align: center; color: var(--muted); }
+.empty strong { display: block; color: var(--text); margin-bottom: 6px; font-size: 15px; }
+.detail { padding: 18px 20px; display: grid; grid-template-columns: minmax(0, 1fr); gap: 18px; }
+.detail h2 { margin: 0; font-size: 17px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.facts { display: flex; flex-wrap: wrap; gap: 6px 22px; color: var(--muted); font-size: 13px; }
+.facts b { color: var(--text); font-weight: 600; }
+.notice { padding: 10px 12px; border-radius: 8px; font-size: 13px; }
+.notice.warn { background: var(--warn-soft); color: var(--warn); }
+.notice.err { background: var(--err-soft); color: var(--err); }
+.notice.info { background: var(--accent-soft); color: var(--accent); }
+.notice.ok { background: var(--ok-soft); color: var(--ok); }
+.section-title { font-size: 12px; font-weight: 650; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); margin-bottom: 8px; }
+.table-wrap { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-size: 13px; }
+th, td { text-align: left; padding: 7px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { color: var(--muted); font-weight: 600; width: 32%; }
+td { word-break: break-word; white-space: pre-wrap; }
+.formats { display: flex; flex-wrap: wrap; gap: 8px; }
+.format { border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; display: flex; gap: 10px; align-items: center; }
+.format.active { border-color: var(--accent); background: var(--accent-soft); }
+.format .name { font-weight: 650; }
+.format .size { color: var(--muted); font-size: 12px; }
+.preview { width: 100%; height: 640px; border: 1px solid var(--line); border-radius: 8px; background: #fff; }
+pre { background: var(--code); border: 1px solid var(--line); border-radius: 8px; padding: 12px; overflow: auto; font-size: 12.5px; margin: 0; white-space: pre-wrap; word-break: break-all; max-height: 420px; }
+details summary { cursor: pointer; color: var(--muted); font-weight: 600; font-size: 13px; }
+details pre { margin-top: 8px; }
+.tree { padding: 8px 0; max-height: calc(100vh - 230px); overflow: auto; }
+.node { display: flex; align-items: center; gap: 6px; padding: 6px 14px; cursor: pointer; }
+.node:hover { background: var(--code); }
+.node.selected { background: var(--accent-soft); color: var(--accent); }
+.node .icon { width: 18px; text-align: center; color: var(--muted); flex: none; }
+.node .text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.node.group .text { font-weight: 600; }
+form.editor { padding: 18px 20px; display: grid; gap: 14px; }
+label { display: grid; gap: 5px; font-weight: 600; font-size: 13px; }
+label .hint { font-weight: 400; color: var(--muted); }
+input[type=text], input[type=number], textarea, select { width: 100%; border: 1px solid var(--line); border-radius: 7px; padding: 8px 10px; background: var(--panel); }
+textarea { min-height: 220px; resize: vertical; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 13px; line-height: 1.5; }
+textarea.data { min-height: 110px; }
+input:focus, textarea:focus, select:focus { outline: 2px solid var(--accent-soft); border-color: var(--accent); }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { font-family: ui-monospace, Menlo, monospace; font-size: 12px; background: var(--code); border: 1px solid var(--line); border-radius: 6px; padding: 1px 7px; }
+.actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.status-text { color: var(--muted); font-size: 13px; }
+.status-text.err { color: var(--err); }
+.status-text.ok { color: var(--ok); }
+.grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; align-items: start; }
+.card { padding: 18px 20px; display: grid; gap: 14px; }
+.card h3 { margin: 0; font-size: 15px; }
+.card p { margin: 0; color: var(--muted); }
+.radio { display: flex; gap: 8px; align-items: center; font-weight: 500; }
+.radios { display: grid; gap: 8px; }
+ol { margin: 0; padding-left: 20px; color: var(--muted); } ol li { margin-bottom: 4px; } ol b { color: var(--text); }
+[hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<header>
+  <div class="brand"><div class="logo">SD</div>SmartDocuments mock</div>
+  <div class="meta">
+    <span>Plugin URL <code id="baseUrl"></code></span>
+    <span>Credentials <code id="credentials">…</code></span>
+  </div>
+  <div class="live"><span class="dot" id="liveDot"></span><span id="liveText">Live</span></div>
+</header>
+<nav>
+  <button data-tab="requests" class="active">Requests <span class="count" id="requestCount">0</span></button>
+  <button data-tab="templates">Templates</button>
+  <button data-tab="settings">Settings</button>
+</nav>
+<main>
+  <!-- Requests -->
+  <section id="tab-requests">
+    <div class="split">
+      <div class="panel">
+        <div class="toolbar"><span class="title">Received requests</span><button class="btn small danger" id="clearLog">Clear</button></div>
+        <div class="list" id="requestList"></div>
+      </div>
+      <div class="panel" id="requestDetail"></div>
+    </div>
+  </section>
+
+  <!-- Templates -->
+  <section id="tab-templates" hidden>
+    <div class="split">
+      <div class="panel">
+        <div class="toolbar"><span class="title">Template groups</span><button class="btn small" id="addRootGroup">+ Group</button></div>
+        <div class="tree" id="tree"></div>
+      </div>
+      <div class="panel">
+        <div class="toolbar">
+          <span class="title" id="editorTitle">Editor</span>
+          <span class="status-text" id="saveStatus"></span>
+          <button class="btn small" id="resetTemplates">Reset to defaults</button>
+          <button class="btn small primary" id="saveTemplates" disabled>Save changes</button>
+        </div>
+        <div id="editor"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Settings -->
+  <section id="tab-settings" hidden>
+    <div class="grid2">
+      <div class="panel card">
+        <h3>Simulate an error</h3>
+        <p>Make the mock fail, to test how the plugin and your process handle SmartDocuments errors. Applies to both endpoints.</p>
+        <div class="radios" id="failureOptions">
+          <label class="radio"><input type="radio" name="failure" value=""> No error</label>
+          <label class="radio"><input type="radio" name="failure" value="400"> 400 Bad Request</label>
+          <label class="radio"><input type="radio" name="failure" value="401"> 401 Unauthorized</label>
+          <label class="radio"><input type="radio" name="failure" value="500"> 500 Internal Server Error</label>
+        </div>
+        <label class="radio"><input type="checkbox" id="failureOnce"> Only for the next request</label>
+        <label class="radio"><input type="checkbox" id="simulateWhitespace"> Simulate SmartDocuments whitespace handling</label>
+        <p>SmartDocuments loses line breaks in JSON values, and in XML values without <code class="chip">xml:space="preserve"</code>. Turn this off to always keep them.</p>
+        <label>Response delay <span class="hint">in milliseconds, to simulate a slow SmartDocuments server</span>
+          <input type="number" id="delayMs" min="0" max="120000" step="100"></label>
+        <div class="actions"><button class="btn primary" id="saveSettings">Apply</button><span class="status-text" id="settingsStatus"></span></div>
+      </div>
+      <div class="panel card">
+        <h3>How to use</h3>
+        <ol>
+          <li>The <b>SmartDocuments (Autodeployed)</b> plugin configuration in the example app points to this mock.</li>
+          <li>Start an <b>Example</b> case. The process calls <b>get-template-names</b> and <b>generate-document</b>.</li>
+          <li>The requests appear in the <b>Requests</b> tab, with the template data and a preview of each generated format.</li>
+          <li>The generated document is stored in the Documenten API. Open it in the <b>Documents</b> tab of the case.</li>
+          <li>Set <b>Payload format</b> to XML in the generate-document action to keep line breaks in text values. The Requests tab shows which values kept or lost their line breaks.</li>
+          <li>Change the letters in the <b>Templates</b> tab. Use <code class="chip">{{key}}</code> for a template data value.</li>
+        </ol>
+        <p>Template edits are saved in <code class="chip">imports/smartdocuments-mock/data/</code>, which git ignores.</p>
+      </div>
+    </div>
+  </section>
+</main>
+
+<script>
+(function () {
+  const $ = id => document.getElementById(id);
+  const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c]));
+  const fmtSize = n => n < 1024 ? n + ' B' : (n / 1024).toFixed(1) + ' kB';
+  const fmtTime = iso => new Date(iso).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit', second: '2-digit'});
+  const valueText = v => v === null || v === undefined ? '' : typeof v === 'object' ? JSON.stringify(v) : String(v);
+  async function api(method, path, body) {
+    const res = await fetch(path, {method, headers: body ? {'Content-Type': 'application/json'} : {}, body: body ? JSON.stringify(body) : undefined});
+    const data = res.headers.get('Content-Type')?.includes('json') ? await res.json() : null;
+    if (!res.ok) throw new Error(data?.error || res.statusText);
+    return data;
+  }
+
+  $('baseUrl').textContent = location.origin + '/';
+
+  // Tabs ----------------------------------------------------------------------------------------------------------
+  const tabs = document.querySelectorAll('nav button');
+  function showTab(name) {
+    tabs.forEach(b => b.classList.toggle('active', b.dataset.tab === name));
+    ['requests', 'templates', 'settings'].forEach(t => $('tab-' + t).hidden = t !== name);
+    try { localStorage.setItem('sdmock.tab', name); } catch (e) {}
+    history.replaceState(null, '', '#' + name);
+  }
+  tabs.forEach(b => b.addEventListener('click', () => showTab(b.dataset.tab)));
+  const hashTab = location.hash.slice(1);
+  if (['requests', 'templates', 'settings'].includes(hashTab)) showTab(hashTab);
+  else try { const saved = localStorage.getItem('sdmock.tab'); if (saved) showTab(saved); } catch (e) {}
+
+  // Requests ------------------------------------------------------------------------------------------------------
+  let requests = [], selectedId = null, selectedFormat = 'PDF', lastSignature = '', settingsCache = {};
+
+  function requestLabel(r) {
+    if (r.path.startsWith('/sdapi/structure')) return 'Get template structure';
+    if (r.path.startsWith('/wsxmldeposit')) return 'Generate document';
+    return r.method + ' ' + r.path;
+  }
+
+  function renderList() {
+    $('requestCount').textContent = requests.length;
+    if (!requests.length) {
+      $('requestList').innerHTML = '<div class="empty"><strong>No requests yet</strong>Start an Example case in GZAC, or configure a SmartDocuments plugin with the URL above.</div>';
+      return;
+    }
+    $('requestList').innerHTML = requests.map(r => `
+      <div class="item ${r.id === selectedId ? 'selected' : ''}" data-id="${r.id}">
+        <div class="row"><span class="label">${esc(requestLabel(r))}</span>${r.payloadFormat ? `<span class="tag">${r.payloadFormat}</span>` : ''}<span class="badge s${String(r.status)[0]}">${r.status}</span></div>
+        <div class="sub">${r.template ? esc(r.templateGroup + ' / ' + r.template) : esc(r.message || '')}</div>
+        <div class="sub">${fmtTime(r.time)} · ${r.durationMs} ms${r.user ? ' · ' + esc(r.user) : ''}</div>
+      </div>`).join('');
+  }
+
+  function renderDetail() {
+    const r = requests.find(x => x.id === selectedId);
+    if (!r) {
+      $('requestDetail').innerHTML = '<div class="empty"><strong>Select a request</strong>You will see the template data the plugin sent and the documents the mock generated.</div>';
+      return;
+    }
+    const ok = r.status === 200;
+    const data = r.customerData;
+    const notice = !ok ? `<div class="notice ${r.status >= 500 ? 'err' : 'warn'}">${esc(r.message)}</div>`
+      : r.missingPlaceholders?.length ? `<div class="notice warn">The template uses placeholders that were not in the template data: ${r.missingPlaceholders.map(p => `<code class="chip">${esc(p)}</code>`).join(' ')}. They show as [key] in the document.</div>`
+      : r.files?.length ? `<div class="notice info">${esc(r.message)}. The plugin picks the format you configured in the process link.</div>`
+      : r.message ? `<div class="notice info">${esc(r.message)}</div>` : '';
+    const chips = paths => paths.map(p => `<code class="chip">${esc(p)}</code>`).join(' ');
+    const lineBreaks = (r.keptLineBreaks?.length ? `<div class="notice ok">Line breaks kept with <code class="chip">xml:space="preserve"</code>: ${chips(r.keptLineBreaks)}</div>` : '')
+      + (r.lostLineBreaks?.length ? `<div class="notice warn">Line breaks lost in ${chips(r.lostLineBreaks)}. ${r.payloadFormat === 'XML'
+        ? 'These XML elements have no <code class="chip">xml:space="preserve"</code>, so SmartDocuments ignores the line breaks.'
+        : 'SmartDocuments ignores line breaks in a JSON payload. Send the payload as XML to keep them.'}${settingsCache.simulateWhitespace === false ? ' (Simulation is off in Settings, so the document still shows them.)' : ''}</div>` : '');
+    const dataTable = data ? `<div><div class="section-title">Template data received</div><div class="table-wrap"><table>${
+      Object.keys(data).length ? Object.entries(data).map(([k, v]) => `<tr><th>${esc(k)}</th><td>${esc(valueText(v))}</td></tr>`).join('') : '<tr><td>No template data</td></tr>'
+    }</table></div></div>` : '';
+    let files = '';
+    if (r.files?.length) {
+      if (!r.files.some(f => f.format === selectedFormat) || selectedFormat === 'DOCX') selectedFormat = 'PDF';
+      const previewable = ['PDF', 'HTML', 'XML'].includes(selectedFormat);
+      files = `<div><div class="section-title">Generated documents</div><div class="formats">${r.files.map(f => `
+        <div class="format ${f.format === selectedFormat ? 'active' : ''}">
+          <div><div class="name">${f.format}</div><div class="size">${esc(f.filename)} · ${fmtSize(f.size)}</div></div>
+          ${f.format === 'DOCX' ? '' : `<button class="btn small" data-preview="${f.format}">Preview</button>`}
+          <a class="btn small" href="/files/${r.id}/${f.format}?download" download>Download</a>
+        </div>`).join('')}</div></div>
+        ${previewable ? `<iframe class="preview" title="Document preview" src="/files/${r.id}/${selectedFormat}"></iframe>`
+          : `<div class="notice info">Your browser can't preview a ${selectedFormat} file. Use Download to open it in Word.</div>`}`;
+    }
+    let rawText = r.rawBody || '';
+    if (r.payloadFormat === 'JSON') { try { rawText = JSON.stringify(JSON.parse(rawText), null, 2); } catch (e) {} }
+    const raw = rawText ? `<details${r.payloadFormat === 'XML' ? ' open' : ''}><summary>Request body (${r.payloadFormat}, as received)</summary><pre>${esc(rawText)}</pre></details>` : '';
+    $('requestDetail').innerHTML = `<div class="detail">
+      <h2>${esc(requestLabel(r))} <span class="badge s${String(r.status)[0]}">${r.status}</span></h2>
+      <div class="facts"><span>Time <b>${new Date(r.time).toLocaleString()}</b></span><span>Duration <b>${r.durationMs} ms</b></span>
+        <span>User <b>${esc(r.user || '-')}</b></span>${r.payloadFormat ? `<span>Payload <b>${r.payloadFormat}</b></span>` : ''}${r.template ? `<span>Template <b>${esc(r.templateGroup)} / ${esc(r.template)}</b></span>` : ''}</div>
+      ${notice}${lineBreaks}${dataTable}${files}${raw}</div>`;
+  }
+
+  $('requestList').addEventListener('click', e => {
+    const item = e.target.closest('.item'); if (!item) return;
+    selectedId = item.dataset.id; renderList(); renderDetail();
+  });
+  $('requestDetail').addEventListener('click', e => {
+    const btn = e.target.closest('[data-preview]'); if (!btn) return;
+    selectedFormat = btn.dataset.preview; renderDetail();
+  });
+  $('clearLog').addEventListener('click', async () => { await api('DELETE', '/api/requests'); requests = []; selectedId = null; lastSignature = ''; renderList(); renderDetail(); });
+
+  async function poll() {
+    try {
+      const data = await api('GET', '/api/requests');
+      $('liveDot').classList.remove('off'); $('liveText').textContent = 'Live';
+      const signature = data.map(r => r.id).join();
+      if (signature !== lastSignature) {
+        const isNew = data.length && (!requests.length || data[0].id !== requests[0]?.id);
+        requests = data; lastSignature = signature;
+        if (!requests.some(r => r.id === selectedId) || (isNew && !document.hidden)) selectedId = requests[0]?.id ?? null;
+        renderList(); renderDetail();
+      }
+    } catch (e) {
+      $('liveDot').classList.add('off'); $('liveText').textContent = 'Mock not reachable';
+    }
+  }
+  renderList(); renderDetail(); poll(); setInterval(poll, 2000);
+
+  // Templates -----------------------------------------------------------------------------------------------------
+  let templates = {groups: []}, selectedPath = null, dirty = false;
+
+  function nodeAt(path) {
+    // path: [groupIndex, groupIndex, ..., {t: templateIndex}]
+    let groups = templates.groups, node = null;
+    for (const step of path) {
+      if (typeof step === 'object') return node.templates[step.t];
+      node = groups[step]; groups = node.groups || [];
+    }
+    return node;
+  }
+  function parentList(path) {
+    const last = path[path.length - 1];
+    if (typeof last === 'object') return {list: nodeAt(path.slice(0, -1)).templates, index: last.t};
+    return {list: path.length === 1 ? templates.groups : nodeAt(path.slice(0, -1)).groups, index: last};
+  }
+  const samePath = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+
+  function renderTree() {
+    const rows = [];
+    function walk(groups, path, depth) {
+      groups.forEach((g, i) => {
+        const gp = [...path, i];
+        rows.push(`<div class="node group ${samePath(gp, selectedPath) ? 'selected' : ''}" style="padding-left:${14 + depth * 16}px" data-path='${JSON.stringify(gp)}'><span class="icon">▾</span><span class="text">${esc(g.name || '(unnamed group)')}</span></div>`);
+        (g.templates || []).forEach((t, ti) => {
+          const tp = [...gp, {t: ti}];
+          rows.push(`<div class="node ${samePath(tp, selectedPath) ? 'selected' : ''}" style="padding-left:${30 + depth * 16}px" data-path='${JSON.stringify(tp)}'><span class="icon">▤</span><span class="text">${esc(t.name || '(unnamed template)')}</span></div>`);
+        });
+        walk(g.groups || [], gp, depth + 1);
+      });
+    }
+    walk(templates.groups, [], 0);
+    $('tree').innerHTML = rows.join('') || '<div class="empty"><strong>No template groups</strong>Add a group to start.</div>';
+  }
+
+  function placeholders(text) { return [...new Set([...(text || '').matchAll(/\{\{\s*([\w.\-]+)\s*\}\}/g)].map(m => m[1]))]; }
+  function lastTemplateData() { return requests.find(r => r.customerData && Object.keys(r.customerData).length)?.customerData || {name: 'Jane Doe', templateGroup: 'Example', staticValue: 'Hello from the preview'}; }
+
+  function renderEditor() {
+    const node = selectedPath && nodeAt(selectedPath);
+    if (!node) {
+      $('editorTitle').textContent = 'Editor';
+      $('editor').innerHTML = '<div class="empty"><strong>Select a group or template</strong>The plugin finds a template by its group name and template name.</div>';
+      return;
+    }
+    const isTemplate = typeof selectedPath[selectedPath.length - 1] === 'object';
+    if (!isTemplate) {
+      $('editorTitle').textContent = 'Template group';
+      $('editor').innerHTML = `<form class="editor" onsubmit="return false">
+        <label>Name <span class="hint">used as <code class="chip">templateGroup</code> / <code class="chip">templateGroupName</code> in the plugin actions</span><input type="text" data-field="name" value="${esc(node.name)}"></label>
+        <div class="actions"><button class="btn" data-action="addTemplate">+ Template</button><button class="btn" data-action="addGroup">+ Subgroup</button><button class="btn danger" data-action="delete">Delete group</button></div>
+      </form>`;
+      return;
+    }
+    $('editorTitle').textContent = 'Template';
+    const used = placeholders((node.title || '') + ' ' + (node.body || ''));
+    $('editor').innerHTML = `<form class="editor" onsubmit="return false">
+      <label>Name <span class="hint">used as <code class="chip">templateName</code> in the generate-document action</span><input type="text" data-field="name" value="${esc(node.name)}"></label>
+      <label>Document title <input type="text" data-field="title" value="${esc(node.title || '')}"></label>
+      <label>Body <span class="hint">empty line = new paragraph · <code class="chip">{{key}}</code> = value of template data key</span><textarea data-field="body">${esc(node.body || '')}</textarea></label>
+      <div><div class="section-title">Placeholders in this template</div><div class="chips">${used.length ? used.map(p => `<span class="chip">${esc(p)}</span>`).join('') : '<span class="status-text">None</span>'}</div></div>
+      <label>Preview data <span class="hint">JSON, taken from the last generate request</span><textarea class="data" id="previewData">${esc(JSON.stringify(lastTemplateData(), null, 2))}</textarea></label>
+      <div class="actions"><button class="btn" data-action="preview" data-format="PDF">Preview PDF</button><button class="btn" data-action="preview" data-format="HTML">Preview HTML</button><button class="btn danger" data-action="delete">Delete template</button><span class="status-text err" id="previewError"></span></div>
+      <iframe class="preview" id="previewFrame" title="Template preview" hidden></iframe>
+    </form>`;
+  }
+
+  function markDirty() { dirty = true; $('saveTemplates').disabled = false; $('saveStatus').className = 'status-text'; $('saveStatus').textContent = 'Unsaved changes'; }
+
+  $('tree').addEventListener('click', e => {
+    const n = e.target.closest('.node'); if (!n) return;
+    selectedPath = JSON.parse(n.dataset.path); renderTree(); renderEditor();
+  });
+  $('editor').addEventListener('input', e => {
+    const field = e.target.dataset.field; if (!field) return;
+    nodeAt(selectedPath)[field] = e.target.value; markDirty(); renderTree();
+    if (field !== 'name') {
+      const chips = $('editor').querySelector('.chips'), node = nodeAt(selectedPath);
+      const used = placeholders((node.title || '') + ' ' + (node.body || ''));
+      chips.innerHTML = used.length ? used.map(p => `<span class="chip">${esc(p)}</span>`).join('') : '<span class="status-text">None</span>';
+    }
+  });
+  $('editor').addEventListener('click', async e => {
+    const btn = e.target.closest('[data-action]'); if (!btn) return;
+    const action = btn.dataset.action, node = nodeAt(selectedPath);
+    if (action === 'addTemplate') {
+      node.templates = node.templates || [];
+      node.templates.push({name: 'New template', title: 'New document for {{name}}', body: 'Dear {{name}},\n\n…\n\nKind regards'});
+      selectedPath = [...selectedPath, {t: node.templates.length - 1}];
+    } else if (action === 'addGroup') {
+      node.groups = node.groups || [];
+      node.groups.push({name: 'New group', templates: [], groups: []});
+      selectedPath = [...selectedPath, node.groups.length - 1];
+    } else if (action === 'delete') {
+      if (btn.dataset.confirm !== 'yes') { btn.dataset.confirm = 'yes'; btn.textContent = 'Click again to delete'; return; }
+      const {list, index} = parentList(selectedPath); list.splice(index, 1); selectedPath = null;
+    } else if (action === 'preview') {
+      let data;
+      try { data = JSON.parse($('previewData').value || '{}'); $('previewError').textContent = ''; }
+      catch (err) { $('previewError').textContent = 'Preview data is not valid JSON'; return; }
+      const res = await fetch('/api/preview', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({template: node, group: nodeAt(selectedPath.slice(0, -1)).name, customerData: data, format: btn.dataset.format})});
+      const frame = $('previewFrame'); if (frame.dataset.url) URL.revokeObjectURL(frame.dataset.url);
+      frame.dataset.url = URL.createObjectURL(await res.blob()); frame.src = frame.dataset.url; frame.hidden = false;
+      return;
+    }
+    markDirty(); renderTree(); renderEditor();
+  });
+  $('addRootGroup').addEventListener('click', () => {
+    templates.groups.push({name: 'New group', templates: [], groups: []});
+    selectedPath = [templates.groups.length - 1]; markDirty(); renderTree(); renderEditor();
+  });
+  $('saveTemplates').addEventListener('click', async () => {
+    try {
+      const res = await api('PUT', '/api/templates', templates);
+      templates = res.templates; dirty = false; $('saveTemplates').disabled = true;
+      $('saveStatus').className = 'status-text ok'; $('saveStatus').textContent = 'Saved';
+    } catch (err) { $('saveStatus').className = 'status-text err'; $('saveStatus').textContent = err.message; }
+  });
+  $('resetTemplates').addEventListener('click', async e => {
+    const btn = e.currentTarget;
+    if (btn.dataset.confirm !== 'yes') { btn.dataset.confirm = 'yes'; btn.textContent = 'Click again to reset'; setTimeout(() => { btn.dataset.confirm = ''; btn.textContent = 'Reset to defaults'; }, 4000); return; }
+    btn.dataset.confirm = ''; btn.textContent = 'Reset to defaults';
+    const res = await api('POST', '/api/templates/reset'); templates = res.templates; selectedPath = null; dirty = false;
+    $('saveTemplates').disabled = true; $('saveStatus').className = 'status-text ok'; $('saveStatus').textContent = 'Defaults restored';
+    renderTree(); renderEditor();
+  });
+  window.addEventListener('beforeunload', e => { if (dirty) { e.preventDefault(); e.returnValue = ''; } });
+  api('GET', '/api/templates').then(res => { templates = res.templates; renderTree(); renderEditor(); });
+
+  // Settings ------------------------------------------------------------------------------------------------------
+  function applySettings(s) {
+    $('credentials').textContent = s.username + ' / ' + s.password;
+    document.querySelectorAll('input[name=failure]').forEach(r => r.checked = r.value === String(s.failureStatus ?? ''));
+    $('failureOnce').checked = s.failureOnce; $('delayMs').value = s.delayMs;
+    $('simulateWhitespace').checked = s.simulateWhitespace !== false; settingsCache = s;
+  }
+  $('saveSettings').addEventListener('click', async () => {
+    const failure = document.querySelector('input[name=failure]:checked')?.value || null;
+    try {
+      applySettings(await api('PUT', '/api/settings', {failureStatus: failure, failureOnce: $('failureOnce').checked, delayMs: Number($('delayMs').value) || 0, simulateWhitespace: $('simulateWhitespace').checked}));
+      $('settingsStatus').className = 'status-text ok'; $('settingsStatus').textContent = failure ? `The mock now answers with ${failure}` : 'Applied';
+    } catch (err) { $('settingsStatus').className = 'status-text err'; $('settingsStatus').textContent = err.message; }
+  });
+  api('GET', '/api/settings').then(applySettings);
+  setInterval(() => { if ($('tab-settings').hidden) return; api('GET', '/api/settings').then(s => { if (!document.activeElement?.closest('#tab-settings')) applySettings(s); }); }, 5000);
+})();
+</script>
+</body>
+</html>

@@ -221,7 +221,7 @@ VALUES (1, '405da8a9-7296-439c-a2eb-a470b84f17ee', 1, 'inkomend', 1, NULL, 1, '_
 SELECT setval(pg_get_serial_sequence('catalogi_zaaktypeinformatieobjecttype', 'id'), 1, true);
 
 UPDATE notifications_notificationsconfig
-SET api_root = 'http://host.docker.internal:8002/api/v1/';
+SET api_root = 'http://localhost:8012/api/v1/';
 
 
 -- Objecten API service for zaakobject validation

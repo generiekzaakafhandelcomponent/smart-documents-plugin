@@ -71,18 +71,56 @@ services:
         rabbitmq-server
       "
 
+  smartdocuments-mock:
+    # Mock of the SmartDocuments web API, so the example case works without a SmartDocuments account. It fills the
+    # templates with the template data and returns real PDF, DOCX, HTML and XML files.
+    # Web UI (requests, document previews, template editor, error simulation): http://localhost:8099
+    image: python:3.13-alpine
+    container_name: plugin-docker-compose-smartdocuments-mock
+    command: [ "python", "-u", "/app/server.py" ]
+    environment:
+      - SMARTDOCUMENTS_USERNAME=valtimo
+      - SMARTDOCUMENTS_PASSWORD=valtimo
+    ports:
+      # Only on localhost: the mock UI and API have no login and show the template data of every request
+      - "127.0.0.1:8099:8080"
+    volumes:
+      - ./imports/smartdocuments-mock:/app
+    healthcheck:
+      test: [ "CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8080/health')" ]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+
   # ZGW
+  # The ZGW services share the network of the 'localhost' container, so they
+  # reach each other (and Valtimo reaches them) on localhost:<port>. The ports are published by the 'localhost' container.
+
+  localhost:
+    container_name: plugin-docker-compose-localhost
+    image: alpine:3.22
+    command: sleep infinity
+    profiles:
+      - zgw
+      - openzaak
+      - objecten
+    ports:
+      - "8001:8001" # Open Zaak (Zaken, Catalogi, Documenten, Besluiten API)
+      - "8010:8010" # Objecten API
+      - "8011:8011" # Objecttypen API
+      - "8012:8012" # Open Notificaties
 
   openzaak:
     image: openzaak/open-zaak:1.20.0
     container_name: plugin-docker-compose-openzaak
     platform: linux/amd64
+    network_mode: "service:localhost"
     profiles:
       - zgw
       - openzaak
     environment:
+      - UWSGI_PORT=8001
       - DB_HOST=openzaak-database
-      - DB_POST=5433
       - SECRET_KEY=veryRestrictedSecretKey
       - DB_USER=openzaak
       - DB_PASSWORD=openzaak
@@ -97,9 +135,8 @@ services:
       - SENDFILE_BACKEND=django_sendfile.backends.simple
       - NOTIFICATIONS_DISABLED=true
       - DISABLE_2FA=True
-    ports:
-      - "8001:8000"
     depends_on:
+      - localhost
       - openzaak-database
       - openzaak-redis
 
@@ -114,8 +151,6 @@ services:
       - POSTGRES_USER=openzaak
       - POSTGRES_PASSWORD=openzaak
       - POSTGRES_DB=openzaak
-    ports:
-      - "5433:5432"
     volumes:
       - ./imports/open-zaak:/docker-entrypoint-initdb.d
 
@@ -127,44 +162,49 @@ services:
       - openzaak
 
   objecten-api:
-    image: maykinmedia/objects-api:2.4.4
+    image: maykinmedia/objects-api:3.2.0
     container_name: plugin-docker-compose-objecten-api
     platform: linux/amd64
+    network_mode: "service:localhost"
     profiles:
       - zgw
       - objecten
-    ports:
-      - "8010:8000"
     environment: &objects-env
-      - DB_USER=objects
-      - DB_PASSWORD=objects
-      - DB_HOST=objecten-api-database
-      - DJANGO_SETTINGS_MODULE=objects.conf.docker
+      - UWSGI_PORT=8010
+      - CORS_ALLOW_ALL_ORIGINS=true
       - SECRET_KEY=${SECRET_KEY:-1(@f(-6s_u(5fd&1sg^uvu2s(c-9sapw)1era8q&)g)h@cwxxg}
-      - IS_HTTPS=no
-      - ALLOWED_HOSTS=*
-      - CACHE_DEFAULT=objecten-api-redis:6379/0
-      - CACHE_AXES=objecten-api-redis:6379/0
-      - CELERY_BROKER_URL=redis://objecten-api-redis:6379/1
-      - CELERY_RESULT_BACKEND=redis://objecten-api-redis:6379/1
+      - DJANGO_SETTINGS_MODULE=objects.conf.docker
+      - DB_HOST=objecten-api-database
+      - DEBUG=true
+      - TWO_FACTOR_FORCE_OTP_ADMIN=False
+      - TWO_FACTOR_PATCH_ADMIN=False
+      - DISABLE_2FA=true
+      - CACHE_AXES=zgw-redis:6379/0
+      - CACHE_DEFAULT=zgw-redis:6379/0
+      - ALLOWED_HOSTS=localhost,host.docker.internal,172.17.0.1
+      - CELERY_BROKER_URL=redis://zgw-redis:6379/1
+      - CELERY_RESULT_EXPIRES=3600
+      - CELERY_RESULT_BACKEND=redis://zgw-redis:6379/1
       - CELERY_LOGLEVEL=DEBUG
-      - DISABLE_2FA=True
-      - OBJECTS_SUPERUSER_EMAIL=admin@example.org
-      - OBJECTS_SUPERUSER_USERNAME=admin
-      - OBJECTS_SUPERUSER_PASSWORD=admin
-      - DEBUG=True
     depends_on:
+      - localhost
       - objecten-api-database
-      - objecten-api-redis
-    healthcheck:
-      test: [ "CMD", "python", "-c", "import requests; exit(requests.head('http://localhost:8000/admin/').status_code not in [200, 302])" ]
-      interval: 30s
-      timeout: 5s
-      retries: 3
-      # This should allow for enough time for migrations to run before the max
-      # retries have passed. This healthcheck in turn allows other containers
-      # to wait for the database migrations.
-      start_period: 30s
+      - zgw-redis
+
+  objecten-api-celery:
+    image: maykinmedia/objects-api:3.2.0
+    container_name: plugin-docker-compose-objecten-api-celery
+    platform: linux/amd64
+    network_mode: "service:localhost"
+    profiles:
+      - zgw
+      - objecten
+    environment: *objects-env
+    command: /celery_worker.sh
+    depends_on:
+      - objecten-api
+      - objecten-api-database
+      - zgw-redis
 
   objecten-api-database:
     image: postgis/postgis:17-3.4
@@ -173,76 +213,47 @@ services:
     profiles:
       - zgw
       - objecten
-    ports:
-      - "54321:5432"
     environment:
       - POSTGRES_USER=objects
       - POSTGRES_PASSWORD=objects
       - POSTGRES_DB=objects
 
   objecten-api-import:
-    image: maykinmedia/objects-api:2.4.4
+    image: maykinmedia/objects-api:3.2.0
     container_name: plugin-docker-compose-objects-api-import
     platform: linux/amd64
     profiles:
       - zgw
       - objecten
     environment: *objects-env
-    # in the current version of django it is not possible to create a new user with password without user interaction by using the createsuperuser command
+    # The init script waits until the migrations are done, then creates the admin user and loads the fixtures
     command: sh init/init.sh
     volumes:
       - ./imports/objects-api/fixtures:/app/src/objects/fixtures
       - ./imports/objects-api/init:/app/init
     depends_on:
-      objecten-api:
-        condition: service_healthy
-
-  objecten-api-redis:
-    image: redis:7.4.3
-    command: [ "redis-server", "--appendonly", "yes" ]
-    container_name: plugin-docker-compose-objecten-api-redis
-    profiles:
-      - zgw
-      - objecten
-
-  objecten-api-celery:
-    image: maykinmedia/objects-api:2.4.4
-    environment: *objects-env
-    command: /celery_worker.sh
-    healthcheck:
-      test: [ "CMD", "python", "/app/bin/check_celery_worker_liveness.py" ]
-      interval: 30s
-      timeout: 5s
-      retries: 3
-      start_period: 10s
-    depends_on:
-      objecten-api:
-        condition: service_healthy
-    profiles:
-      - zgw
-      - objecten
-
+      - objecten-api
 
   objecttypen-api:
     image: maykinmedia/objecttypes-api:3.0.2
     container_name: plugin-docker-compose-objecttypen-api
     platform: linux/amd64
+    network_mode: "service:localhost"
     profiles:
       - zgw
       - objecten
-    ports:
-      - "8011:8000"
     environment: &objecttypes-env
+      - UWSGI_PORT=8011
       - DB_HOST=objecttypen-api-database
       - DB_USER=objecttypes
       - DB_PASSWORD=objecttypes
       - DJANGO_SETTINGS_MODULE=objecttypes.conf.docker
       - SECRET_KEY=${SECRET_KEY:-fgv=c0hz&tl*8*3m3893@m+1pstrvidc9e^5@fpspmg%cy$$15d}
       - ALLOWED_HOSTS=*
-      - CACHE_DEFAULT=objecten-api-redis:6379/0
-      - CACHE_AXES=objecten-api-redis:6379/0
-      - CELERY_BROKER_URL=redis://objecten-api-redis:6379/1
-      - CELERY_RESULT_BACKEND=redis://objecten-api-redis:6379/1
+      - CACHE_DEFAULT=zgw-redis:6379/0
+      - CACHE_AXES=zgw-redis:6379/0
+      - CELERY_BROKER_URL=redis://zgw-redis:6379/1
+      - CELERY_RESULT_BACKEND=redis://zgw-redis:6379/1
       - CELERY_LOGLEVEL=DEBUG
       - DISABLE_2FA=True
       - OBJECTTYPE_SUPERUSER_EMAIL=admin@example.org
@@ -250,9 +261,11 @@ services:
       - OBJECTTYPE_SUPERUSER_PASSWORD=admin
       - DEBUG=True
     depends_on:
+      - localhost
       - objecttypen-api-database
+      - zgw-redis
     healthcheck:
-      test: [ "CMD", "python", "-c", "import requests; exit(requests.head('http://localhost:8000/admin/').status_code not in [200, 302])" ]
+      test: [ "CMD", "python", "-c", "import requests; exit(requests.head('http://localhost:8011/admin/').status_code not in [200, 302])" ]
       interval: 30s
       timeout: 5s
       retries: 3
@@ -267,8 +280,6 @@ services:
     profiles:
       - zgw
       - objecten
-    ports:
-      - "54324:5432"
     environment:
       - POSTGRES_USER=objecttypes
       - POSTGRES_PASSWORD=objecttypes
@@ -290,27 +301,20 @@ services:
       objecttypen-api:
         condition: service_healthy
 
-  open-notificaties-rabbitmq:
-    image: rabbitmq:4.1.0-management
-    container_name: plugin-docker-compose-open-notificaties-rabbitmq
-    profiles:
-      - zgw
-    ports:
-      - "5673:5672"
-      - "15673:15672"
-
-  open-notificaties-celery:
-    image: openzaak/open-notificaties:1.8.2
+  open-notificaties:
+    image: openzaak/open-notificaties:1.13.0
     container_name: plugin-docker-compose-open-notificaties
     platform: linux/amd64
+    network_mode: "service:localhost"
     profiles:
       - zgw
     environment: &notificaties-env
+      - UWSGI_PORT=8012
       - DJANGO_SETTINGS_MODULE=nrc.conf.docker
       - SECRET_KEY=${SECRET_KEY:-4wHY2Cp5`4(q%)]cuWxPQJRp5kN?g+`.Xah>%6Fsq6+)R>p_}
       - ALLOWED_HOSTS=*
-      - CACHE_DEFAULT=open-notificaties-redis:6379/0
-      - CACHE_AXES=open-notificaties-redis:6379/1
+      - CACHE_DEFAULT=zgw-redis:6379/0
+      - CACHE_AXES=zgw-redis:6379/0
       - DB_PORT=5432
       - DB_HOST=open-notificaties-database
       - DB_NAME=notifications
@@ -318,52 +322,80 @@ services:
       - DB_PASSWORD=notifications
       - DEBUG=true
       - RABBITMQ_HOST=open-notificaties-rabbitmq
-      - PUBLISH_BROKER_URL=redis://open-notificaties-redis:6379/0
-      - CELERY_BROKER_URL=redis://open-notificaties-redis:6379/0
-      - CELERY_RESULT_BACKEND=redis://open-notificaties-redis:6379/0
+      - PUBLISH_BROKER_URL=amqp://guest:guest@open-notificaties-rabbitmq:5672/%2F
+      - CELERY_BROKER_URL=amqp://guest:guest@open-notificaties-rabbitmq:5672//
+      - CELERY_RESULT_BACKEND=redis://zgw-redis:6379/1
       - CELERY_LOGLEVEL=DEBUG
       - CELERY_WORKER_CONCURRENCY=${CELERY_WORKER_CONCURRENCY:-4}
-      - SUBPATH=${SUBPATH:-/}
-      - DISABLE_2FA=True
-    command: /celery_worker.sh
+      - OPENNOTIFICATIES_SUPERUSER_USERNAME=admin
+      - OPENNOTIFICATIES_SUPERUSER_EMAIL=admin@localhost
+      - DJANGO_SUPERUSER_PASSWORD=admin
+      - LOG_NOTIFICATIONS_IN_DB=yes
+      - DISABLE_2FA=true
     depends_on:
+      - localhost
       - open-notificaties-database
       - open-notificaties-rabbitmq
-      - open-notificaties-redis
+      - zgw-redis
 
-  open-notificaties:
-    image: openzaak/open-notificaties:1.8.1
-    container_name: plugin-docker-compose-open-notificaties-celery
+  open-notificaties-import:
+    image: openzaak/open-notificaties:1.13.0
+    container_name: plugin-docker-compose-open-notificaties-import
     platform: linux/amd64
     profiles:
       - zgw
-    ports:
-      - "8002:8000"
     environment: *notificaties-env
+    # The init script waits until the migrations are done, then loads the fixtures (clients and kanalen)
+    command: sh init/init.sh
+    volumes:
+      - ./imports/open-notificaties/fixtures:/app/src/nrc/fixtures
+      - ./imports/open-notificaties/init:/app/init
     depends_on:
+      - open-notificaties
       - open-notificaties-database
-      - open-notificaties-rabbitmq
-      - open-notificaties-redis
 
-  open-notificaties-database:
-    image: postgres:17.4
-    container_name: plugin-docker-compose-open-notificaties-database
+  open-notificaties-celery:
+    image: openzaak/open-notificaties:1.13.0
+    container_name: plugin-docker-compose-open-notificaties-celery
+    platform: linux/amd64
+    network_mode: "service:localhost"
     profiles:
       - zgw
-    ports:
-      - "54319:5432"
+    environment: *notificaties-env
+    command: /celery_worker.sh
+    depends_on:
+      - open-notificaties
+    healthcheck:
+      test: [ "CMD", "python", "/app/bin/check_celery_worker_liveness.py" ]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  open-notificaties-database:
+    image: postgis/postgis:15-3.5
+    container_name: plugin-docker-compose-open-notificaties-database
+    platform: linux/amd64
+    profiles:
+      - zgw
     environment:
       - POSTGRES_USER=${DB_USER:-notifications}
       - POSTGRES_PASSWORD=${DB_PASSWORD:-notifications}
       - POSTGRES_DB=notifications
-    volumes:
-      - ./imports/open-notificaties:/docker-entrypoint-initdb.d
+      - POSTGRES_HOST_AUTH_METHOD=trust
 
-  open-notificaties-redis:
-    image: redis:7.4.3
-    container_name: plugin-docker-compose-open-notificaties-redis
+  open-notificaties-rabbitmq:
+    image: rabbitmq:3.9-management
+    container_name: plugin-docker-compose-open-notificaties-rabbitmq
     profiles:
       - zgw
+
+  zgw-redis:
+    image: redis:7.4.3
+    container_name: plugin-docker-compose-zgw-redis
+    profiles:
+      - zgw
+      - objecten
 
   open-forms-database:
     image: postgres:17.4

@@ -1,0 +1,570 @@
+/*
+ * Copyright 2015-2024 Ritense BV, the Netherlands.
+ *
+ * Licensed under EUPL, Version 1.2 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * https://joinup.ec.europa.eu/collection/eupl/eupl-text-eupl-12
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" basis,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package com.ritense.valtimoplugins.smartdocuments.client
+
+import com.ritense.resource.service.TemporaryResourceStorageService
+import com.ritense.resource.service.VirusScanService
+import com.ritense.temporaryresource.repository.ResourceStorageMetadataRepository
+import com.ritense.valtimo.contract.json.MapperSingleton
+import com.ritense.valtimo.contract.upload.ValtimoUploadProperties
+import com.ritense.valtimoplugins.smartdocuments.BaseTest
+import com.ritense.valtimoplugins.smartdocuments.config.SmartDocumentsAuthentication
+import com.ritense.valtimoplugins.smartdocuments.domain.DocumentFormatOption
+import com.ritense.valtimoplugins.smartdocuments.domain.PayloadFormatOption
+import com.ritense.valtimoplugins.smartdocuments.domain.SmartDocumentsRequest
+import com.ritense.valtimoplugins.smartdocuments.domain.SmartDocumentsTemplateData
+import okhttp3.mockwebserver.MockResponse
+import okhttp3.mockwebserver.MockWebServer
+import org.assertj.core.api.Assertions.assertThat
+import org.junit.jupiter.api.AfterAll
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertThrows
+import org.junit.jupiter.api.BeforeAll
+import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.TestInstance
+import org.mockito.Mockito
+import org.mockito.Mockito.mock
+import org.mockito.kotlin.any
+import org.mockito.kotlin.never
+import org.mockito.kotlin.spy
+import org.mockito.kotlin.times
+import org.mockito.kotlin.verify
+import org.springframework.http.HttpStatus
+import org.springframework.web.client.HttpClientErrorException
+import org.springframework.web.client.RestClient
+import java.util.concurrent.TimeUnit
+
+@TestInstance(TestInstance.Lifecycle.PER_CLASS)
+internal class SmartDocumentsClientTest : BaseTest() {
+    private lateinit var mockDocumentenApi: MockWebServer
+    private lateinit var client: SmartDocumentsClient
+    private lateinit var temporaryResourceStorageService: TemporaryResourceStorageService
+    private lateinit var repository: ResourceStorageMetadataRepository
+    private lateinit var authentication: SmartDocumentsAuthentication
+    private lateinit var virusScanService: VirusScanService
+
+    @BeforeAll
+    fun setUp() {
+        mockDocumentenApi = MockWebServer()
+        mockDocumentenApi.start()
+        virusScanService = mock()
+        repository = mock()
+        authentication =
+            SmartDocumentsAuthentication(
+                url = mockDocumentenApi.url("/").toString(),
+                username = "username",
+                password = "password",
+            )
+
+        temporaryResourceStorageService =
+            spy(
+                TemporaryResourceStorageService(
+                    uploadProperties = ValtimoUploadProperties(),
+                    objectMapper = MapperSingleton.get(),
+                    repository = repository,
+                    virusScanService = virusScanService,
+                ),
+            )
+
+        client =
+            spy(
+                SmartDocumentsClient(
+                    RestClient.builder(),
+                    5,
+                    temporaryResourceStorageService,
+                ),
+            )
+    }
+
+    @BeforeEach
+    fun resetMocks() {
+        Mockito.reset(temporaryResourceStorageService, client)
+        // Drain any pending recorded requests from previous tests so each test sees a clean queue
+        while (mockDocumentenApi.takeRequest(1, TimeUnit.MILLISECONDS) != null) { /* drain */ }
+        requestCountBaseline = mockDocumentenApi.requestCount
+    }
+
+    private var requestCountBaseline: Int = 0
+    private val requestsThisTest: Int
+        get() = mockDocumentenApi.requestCount - requestCountBaseline
+
+    @AfterAll
+    fun tearDown() {
+        mockDocumentenApi.shutdown()
+    }
+
+    @Test
+    fun `200 ok response should return FilesResponse when client is used`() {
+        val responseBody =
+            """
+            {
+                "file": [
+                    {
+                        "filename": "test.pdf",
+                        "document": {
+                            "data": "Y29udGVudA=="
+                        },
+                        "outputFormat": "PDF"
+                    }
+                ]
+            }
+            """.trimIndent()
+
+        mockDocumentenApi.enqueue(mockResponse(responseBody))
+
+        val response =
+            client.generateDocument(
+                authentication,
+                SmartDocumentsRequest(
+                    emptyMap(),
+                    SmartDocumentsRequest.SmartDocument(
+                        SmartDocumentsRequest.Selection(
+                            "group",
+                            "template",
+                        ),
+                    ),
+                ),
+            )
+
+        assertEquals(1, response.file.size)
+        assertEquals("test.pdf", response.file[0].filename)
+        assertEquals("PDF", response.file[0].outputFormat)
+        assertEquals("Y29udGVudA==", response.file[0].document.data)
+    }
+
+    @Test
+    fun `401 Unauthorized response should throw exception when client is used`() {
+        val responseBody =
+            """
+            <!doctype html>
+            <html lang="en">
+
+            <head>
+                <title>HTTP Status 401 – Unauthorized</title>
+            </head>
+
+            <body>
+                <h1>HTTP Status 401 – Unauthorized</h1>
+                <hr class="line" />
+                <p><b>Type</b> Status Report</p>
+                <p><b>Message</b> Bad credentials</p>
+                <p><b>Description</b> The request has not been applied because it lacks valid authentication credentials for the
+                    target resource.</p>
+                <hr class="line" />
+                <h3>Apache Tomcat/9.0.45</h3>
+            </body>
+
+            </html>
+            """.trimIndent()
+
+        mockDocumentenApi.enqueue(mockResponse(responseBody, "text/html; charset=utf-8", 401))
+
+        val exception =
+            assertThrows(HttpClientErrorException::class.java) {
+                client.generateDocument(
+                    authentication,
+                    SmartDocumentsRequest(
+                        emptyMap(),
+                        SmartDocumentsRequest.SmartDocument(
+                            SmartDocumentsRequest.Selection(
+                                "group",
+                                "template",
+                            ),
+                        ),
+                    ),
+                )
+            }
+        assertThat(exception.statusCode).isEqualTo(HttpStatus.UNAUTHORIZED)
+        assertThat(exception.message).containsIgnoringCase("HTTP Status 401 – Unauthorized")
+    }
+
+    @Test
+    fun `400 Bad Request response should throw exception when client is used`() {
+        val responseBody =
+            """
+            <!doctype html>
+            <html lang="en">
+
+            <head>
+                <title>HTTP Status 400 – Bad Request</title>
+            </head>
+
+            <body>
+                <h1>HTTP Status 400 – Bad Request</h1>
+                <hr class="line" />
+                <p><b>Type</b> Status Report</p>
+                <p><b>Message</b> INVALID_XML: No valid template specified</p>
+                <p><b>Description</b> The server cannot or will not process the request due to something that is perceived to be a
+                    client error (e.g., malformed request syntax, invalid request message framing, or deceptive request routing).
+                </p>
+                <hr class="line" />
+                <h3>Apache Tomcat/9.0.45</h3>
+            </body>
+
+            </html>
+            """.trimIndent()
+
+        // First attempt and fallback attempt both fail with 400 → exception is propagated
+        mockDocumentenApi.enqueue(mockResponse(responseBody, "text/html; charset=utf-8", 400))
+        mockDocumentenApi.enqueue(mockResponse(responseBody, "text/html; charset=utf-8", 400))
+
+        val exception =
+            assertThrows(HttpClientErrorException::class.java) {
+                client.generateDocument(
+                    authentication,
+                    SmartDocumentsRequest(
+                        emptyMap(),
+                        SmartDocumentsRequest.SmartDocument(
+                            SmartDocumentsRequest.Selection(
+                                "group",
+                                "template",
+                            ),
+                        ),
+                    ),
+                )
+            }
+        assertThat(exception.statusCode).isEqualTo(HttpStatus.BAD_REQUEST)
+        assertThat(requestsThisTest).isEqualTo(2)
+    }
+
+    @Test
+    fun `200 ok response should send the original templateGroup unchanged`() {
+        val responseBody =
+            """
+            {
+                "file": [
+                    {
+                        "filename": "test.pdf",
+                        "document": { "data": "Y29udGVudA==" },
+                        "outputFormat": "PDF"
+                    }
+                ]
+            }
+            """.trimIndent()
+
+        mockDocumentenApi.enqueue(mockResponse(responseBody))
+
+        client.generateDocument(
+            authentication,
+            SmartDocumentsRequest(
+                emptyMap(),
+                SmartDocumentsRequest.SmartDocument(
+                    SmartDocumentsRequest.Selection("my-real-template-group", "template"),
+                ),
+            ),
+        )
+
+        assertThat(requestsThisTest).isEqualTo(1)
+        val sentBody = mockDocumentenApi.takeRequest().body.readUtf8()
+        assertThat(sentBody).contains("\"TemplateGroup\":\"my-real-template-group\"")
+    }
+
+    @Test
+    fun `400 Bad Request on first attempt should fall back to a random templateGroup and succeed`() {
+        val errorBody =
+            """
+            <!doctype html>
+            <html lang="en"><head><title>HTTP Status 400 – Bad Request</title></head>
+            <body><h1>HTTP Status 400 – Bad Request</h1></body></html>
+            """.trimIndent()
+        val successBody =
+            """
+            {
+                "file": [
+                    {
+                        "filename": "test.pdf",
+                        "document": { "data": "Y29udGVudA==" },
+                        "outputFormat": "PDF"
+                    }
+                ]
+            }
+            """.trimIndent()
+
+        mockDocumentenApi.enqueue(mockResponse(errorBody, "text/html; charset=utf-8", 400))
+        mockDocumentenApi.enqueue(mockResponse(successBody))
+
+        val response =
+            client.generateDocument(
+                authentication,
+                SmartDocumentsRequest(
+                    emptyMap(),
+                    SmartDocumentsRequest.SmartDocument(
+                        SmartDocumentsRequest.Selection("my-real-template-group", "template"),
+                    ),
+                ),
+            )
+
+        assertEquals(1, response.file.size)
+        assertEquals("test.pdf", response.file[0].filename)
+
+        assertThat(requestsThisTest).isEqualTo(2)
+        val firstBody = mockDocumentenApi.takeRequest().body.readUtf8()
+        val fallbackBody = mockDocumentenApi.takeRequest().body.readUtf8()
+        assertThat(firstBody).contains("\"TemplateGroup\":\"my-real-template-group\"")
+        assertThat(fallbackBody).doesNotContain("\"TemplateGroup\":\"my-real-template-group\"")
+        assertThat(fallbackBody).containsPattern(
+            "\"TemplateGroup\":\"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\"",
+        )
+    }
+
+    @Test
+    fun `200 ok response should return FilesResponse when generating document stream`() {
+        val responseBody =
+            """
+            {
+                "file": [
+                    {
+                        "filename": "test.pdf",
+                        "document": {
+                            "data": "Y29udGVudA=="
+                        },
+                        "outputFormat": "PDF"
+                    }
+                ]
+            }
+            """.trimIndent()
+
+        mockDocumentenApi.enqueue(mockResponse(responseBody))
+
+        val documentResult =
+            client.generateDocumentStream(
+                authentication,
+                SmartDocumentsRequest(
+                    emptyMap(),
+                    SmartDocumentsRequest.SmartDocument(
+                        SmartDocumentsRequest.Selection("group", "template"),
+                    ),
+                ),
+                DocumentFormatOption.PDF,
+            )
+
+        assertThat(documentResult.documentData.available()).isGreaterThan(0)
+        assertThat(documentResult.filename).isEqualTo("test.pdf")
+        assertThat(documentResult.extension).isEqualTo("pdf")
+        verify(temporaryResourceStorageService, times(1)).store(any(), any())
+    }
+
+    @Test
+    fun `400 Bad Request response should throw exception when generating document stream`() {
+        val responseBody = readFileAsString("/data/post-generate-document-400-error-response.html")
+        // First attempt and fallback attempt both fail with 400 → exception is propagated
+        mockDocumentenApi.enqueue(mockResponse(responseBody, "text/html; charset=utf-8", 400))
+        mockDocumentenApi.enqueue(mockResponse(responseBody, "text/html; charset=utf-8", 400))
+
+        val exception =
+            assertThrows(HttpClientErrorException::class.java) {
+                client.generateDocumentStream(
+                    authentication,
+                    SmartDocumentsRequest(
+                        emptyMap(),
+                        SmartDocumentsRequest.SmartDocument(
+                            SmartDocumentsRequest.Selection("group", "template"),
+                        ),
+                    ),
+                    DocumentFormatOption.PDF,
+                )
+            }
+
+        assertThat(exception.statusCode).isEqualTo(HttpStatus.BAD_REQUEST)
+        assertThat(requestsThisTest).isEqualTo(2)
+        verify(temporaryResourceStorageService, never()).store(any(), any())
+    }
+
+    @Test
+    fun `should send the request as JSON by default`() {
+        mockDocumentenApi.enqueue(mockResponse(pdfResponseBody()))
+
+        client.generateDocumentStream(authentication, requestWithMultiLineText(), DocumentFormatOption.PDF)
+
+        val request = mockDocumentenApi.takeRequest()
+        assertThat(request.getHeader("Content-Type")).startsWith("application/json")
+        assertThat(request.body.readUtf8()).contains("\"toelichting\":\"regel 1\\nregel 2\"")
+    }
+
+    @Test
+    fun `should send the request as XML with xml space preserve when payload format is XML`() {
+        mockDocumentenApi.enqueue(mockResponse(pdfResponseBody()))
+
+        val documentResult =
+            client.generateDocumentStream(
+                authentication,
+                requestWithMultiLineText(),
+                DocumentFormatOption.PDF,
+                PayloadFormatOption.XML,
+            )
+
+        assertThat(documentResult.filename).isEqualTo("test.pdf")
+        val request = mockDocumentenApi.takeRequest()
+        assertThat(request.path).isEqualTo("/wsxmldeposit/deposit/unattended")
+        assertThat(request.getHeader("Content-Type")).isEqualTo("application/xml;charset=UTF-8")
+        assertThat(request.getHeader("Accept")).isEqualTo("application/json")
+        assertThat(request.getHeader("Authorization")).startsWith("Basic ")
+        val body = request.body.readUtf8()
+        assertThat(body).startsWith("<?xml").contains("encoding='UTF-8'?><root>")
+        assertThat(body).contains("<toelichting xml:space=\"preserve\">regel 1\nregel 2</toelichting>")
+        assertThat(body).contains("<naam>Café Zoë</naam>")
+        assertThat(body).contains("<TemplateGroup>my-real-template-group</TemplateGroup>")
+    }
+
+    @Test
+    fun `400 Bad Request with XML payload should fall back to a random templateGroup in XML`() {
+        val errorBody = readFileAsString("/data/post-generate-document-400-error-response.html")
+        mockDocumentenApi.enqueue(mockResponse(errorBody, "text/html; charset=utf-8", 400))
+        mockDocumentenApi.enqueue(mockResponse(pdfResponseBody()))
+
+        client.generateDocumentStream(
+            authentication,
+            requestWithMultiLineText(),
+            DocumentFormatOption.PDF,
+            PayloadFormatOption.XML,
+        )
+
+        assertThat(requestsThisTest).isEqualTo(2)
+        val firstBody = mockDocumentenApi.takeRequest().body.readUtf8()
+        val fallback = mockDocumentenApi.takeRequest()
+        val fallbackBody = fallback.body.readUtf8()
+        assertThat(firstBody).contains("<TemplateGroup>my-real-template-group</TemplateGroup>")
+        assertThat(fallback.getHeader("Content-Type")).isEqualTo("application/xml;charset=UTF-8")
+        assertThat(fallbackBody).containsPattern(
+            "<TemplateGroup>[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}</TemplateGroup>",
+        )
+        assertThat(fallbackBody).contains("<toelichting xml:space=\"preserve\">regel 1\nregel 2</toelichting>")
+    }
+
+    @Test
+    fun `should not send a request when a template data key is not valid in XML`() {
+        val request =
+            SmartDocumentsRequest(
+                mapOf("my field" to "x"),
+                SmartDocumentsRequest.SmartDocument(SmartDocumentsRequest.Selection("group", "template")),
+            )
+
+        assertThrows(IllegalArgumentException::class.java) {
+            client.generateDocumentStream(authentication, request, DocumentFormatOption.PDF, PayloadFormatOption.XML)
+        }
+        assertThat(requestsThisTest).isEqualTo(0)
+    }
+
+    @Test
+    fun `200 ok response should return DocumentStructure`() {
+        // given
+        mockDocumentenApi.enqueue(
+            mockResponse(
+                body = smartDocumentsTemplateXml(),
+                contentType = "application/xml",
+            ),
+        )
+
+        // when
+        val response =
+            client.getSmartDocumentsTemplateData(
+                SmartDocumentsAuthentication(
+                    username = "username",
+                    password = "password",
+                    url = mockDocumentenApi.url("").toString(),
+                ),
+            )
+
+        // then
+        assertThat(response).isNotNull
+        assertThat(response).isInstanceOf(SmartDocumentsTemplateData::class.java)
+    }
+
+    private fun requestWithMultiLineText() =
+        SmartDocumentsRequest(
+            mapOf("toelichting" to "regel 1\nregel 2", "naam" to "Café Zoë"),
+            SmartDocumentsRequest.SmartDocument(
+                SmartDocumentsRequest.Selection("my-real-template-group", "template"),
+            ),
+        )
+
+    private fun pdfResponseBody() =
+        """
+        {
+            "file": [
+                {
+                    "filename": "test.pdf",
+                    "document": { "data": "Y29udGVudA==" },
+                    "outputFormat": "PDF"
+                }
+            ]
+        }
+        """.trimIndent()
+
+    private fun mockResponse(
+        body: String,
+        contentType: String = "application/json",
+        responseCode: Int = 200,
+    ): MockResponse =
+        MockResponse()
+            .setResponseCode(responseCode)
+            .addHeader("Content-Type", contentType)
+            .setBody(body)
+
+    private fun smartDocumentsTemplateXml() =
+        """
+<SmartDocuments>
+    <DocumentsStructure>
+        <TemplatesStructure IsAccessible="true">
+            <TemplateGroups>
+                <TemplateGroup IsAccessible="true" ID="34" Name="Werkzaamheden">
+                    <TemplateGroups>
+                        <TemplateGroup IsAccessible="true" ID="34" Name="AI">
+                            <TemplateGroups/>
+                            <Templates>
+                                <Template ID="3523" Name="Bla"/>
+                                <Template ID="223" Name="Plan intakegesprek"/>
+                                <!-- More templates here... -->
+                            </Templates>
+                        </TemplateGroup>
+                        <TemplateGroup IsAccessible="true" ID="F6F9A5AE24834A2AA9612894506AC681" Name="ANW">
+                            <TemplateGroups/>
+                            <Templates>
+                                <Template ID="234" Name="Plan intakegesprek"/>
+                                <Template ID="43" Name="Plan intakegesprek"/>
+                            </Templates>
+                        </TemplateGroup>
+                    </TemplateGroups>
+                    <Templates>
+                        <Template ID="343" Name="Voorbeeld sjabloon"/>
+                        <Template ID="43" Name="Voorbeeld sjabloon 2"/>
+                    </Templates>
+                </TemplateGroup>
+            </TemplateGroups>
+        </TemplatesStructure>
+    </DocumentsStructure>
+    <UsersStructure IsAccessible="true">
+        <GroupsAccess>
+            <TemplateGroups/>
+            <HeaderGroups/>
+        </GroupsAccess>
+        <UserGroups>
+            <UserGroup IsAccessible="true" ID="342" Name="Test">
+                <GroupsAccess>
+                    <TemplateGroups>
+                        <TemplateGroup ID="343" Name="Test" AllDescendants="true"/>
+                        <TemplateGroup ID="324" Name="Werkzaamheden" AllDescendants="true"/>
+                    </TemplateGroups>
+                    <HeaderGroups/>
+                </GroupsAccess>
+            </UserGroup>
+        </UserGroups>
+    </UsersStructure>
+</SmartDocuments>
+        """.trimIndent()
+}

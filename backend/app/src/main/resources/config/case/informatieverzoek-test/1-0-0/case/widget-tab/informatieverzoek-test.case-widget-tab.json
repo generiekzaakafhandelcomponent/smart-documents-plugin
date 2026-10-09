@@ -1,0 +1,96 @@
+[
+    {
+        "key": "summary",
+        "widgets": [
+            {
+                "type": "fields",
+                "key": "smartdocuments-request",
+                "title": "SmartDocuments request",
+                "width": 2,
+                "highContrast": false,
+                "properties": {
+                    "columns": [
+                        [
+                            {
+                                "key": "templateGroup",
+                                "title": "Template group",
+                                "value": "doc:/templateGroup",
+                                "displayProperties": {
+                                    "type": "text",
+                                    "hideWhenEmpty": false
+                                }
+                            },
+                            {
+                                "key": "templateName",
+                                "title": "Template name",
+                                "value": "doc:/templateName",
+                                "displayProperties": {
+                                    "type": "text",
+                                    "hideWhenEmpty": false
+                                }
+                            },
+                            {
+                                "key": "format",
+                                "title": "Document format",
+                                "value": "doc:/format",
+                                "displayProperties": {
+                                    "type": "text",
+                                    "hideWhenEmpty": false
+                                }
+                            },
+                            {
+                                "key": "payloadFormat",
+                                "title": "Payload format",
+                                "value": "doc:/payloadFormat",
+                                "displayProperties": {
+                                    "type": "text",
+                                    "hideWhenEmpty": false
+                                }
+                            }
+                        ]
+                    ]
+                }
+            },
+            {
+                "type": "fields",
+                "key": "smartdocuments-result",
+                "title": "Result",
+                "width": 2,
+                "highContrast": true,
+                "properties": {
+                    "columns": [
+                        [
+                            {
+                                "key": "zaaknummer",
+                                "title": "Zaaknummer (template data)",
+                                "value": "doc:/zaaknummer",
+                                "displayProperties": {
+                                    "type": "text",
+                                    "hideWhenEmpty": false
+                                }
+                            },
+                            {
+                                "key": "achternaam",
+                                "title": "Applicant",
+                                "value": "doc:/gegevensAanvrager/achternaam",
+                                "displayProperties": {
+                                    "type": "text",
+                                    "hideWhenEmpty": false
+                                }
+                            },
+                            {
+                                "key": "storedDocumentUrl",
+                                "title": "Stored document (Documenten API)",
+                                "value": "doc:/storedDocumentUrl",
+                                "displayProperties": {
+                                    "type": "text",
+                                    "hideWhenEmpty": false
+                                }
+                            }
+                        ]
+                    ]
+                }
+            }
+        ]
+    }
+]

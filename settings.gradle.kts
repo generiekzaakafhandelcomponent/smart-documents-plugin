@@ -1,4 +1,4 @@
-rootProject.name = "gzac-plugin-template"
+rootProject.name = "smart-documents-plugin"
 include(
     "backend",
     "backend:app",

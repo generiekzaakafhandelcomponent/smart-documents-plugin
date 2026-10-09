@@ -6,7 +6,7 @@
             "type": "htmlelement",
             "input": false,
             "label": "Instructions",
-            "content": "Start a new example case. The sample plugin will call a Time API during execution.",
+            "content": "Start a case to test the SmartDocuments plugin. The process first fetches the template names of the template group (get-template-names), then generates a document with the chosen template and format (generate-document).",
             "tableView": false,
             "refreshOnChange": false
         },
@@ -15,8 +15,151 @@
             "type": "textfield",
             "input": true,
             "label": "Name",
+            "description": "Sent to SmartDocuments as template data (key 'name').",
             "tableView": true,
-            "applyMaskOn": "change"
+            "applyMaskOn": "change",
+            "validate": {
+                "required": true
+            }
+        },
+        {
+            "key": "message",
+            "type": "textarea",
+            "input": true,
+            "label": "Message",
+            "description": "Free text, sent to SmartDocuments as template data (key 'message'). An empty line starts a new paragraph in the document.",
+            "defaultValue": "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.\n\nUt enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.",
+            "rows": 6,
+            "autoExpand": false,
+            "tableView": true,
+            "applyMaskOn": "change",
+            "validate": {
+                "required": false
+            }
+        },
+        {
+            "key": "opgevraagdeStukken",
+            "type": "datagrid",
+            "input": true,
+            "label": "Requested documents",
+            "description": "A list, sent as template data (key 'opgevraagdeStukken'). With payload format XML, each row becomes an <item> element.",
+            "addAnother": "Add document",
+            "reorder": false,
+            "tableView": false,
+            "defaultValue": [
+                {
+                    "omschrijving": "Crypto munten overzicht",
+                    "toelichting": "Huidige saldo van alle crypto munten.\n1. Geef aan welke munt (coin) het betreft.\n2. Vermeld het aantal coins.\n3. Vermeld de koers inclusief de datum van de koers."
+                },
+                {
+                    "omschrijving": "Kopie overzicht aandelen",
+                    "toelichting": "Alle aandelen en obligaties, geen crypto munten."
+                }
+            ],
+            "components": [
+                {
+                    "key": "omschrijving",
+                    "type": "textfield",
+                    "input": true,
+                    "label": "Description",
+                    "tableView": true,
+                    "applyMaskOn": "change"
+                },
+                {
+                    "key": "toelichting",
+                    "type": "textarea",
+                    "input": true,
+                    "label": "Explanation",
+                    "rows": 4,
+                    "autoExpand": false,
+                    "tableView": true,
+                    "applyMaskOn": "change"
+                }
+            ]
+        },
+        {
+            "key": "templateGroup",
+            "type": "textfield",
+            "input": true,
+            "label": "Template group",
+            "description": "The local mock knows the groups 'Example' and 'Letters' (nested in 'Example').",
+            "defaultValue": "Example",
+            "tableView": true,
+            "applyMaskOn": "change",
+            "validate": {
+                "required": true
+            }
+        },
+        {
+            "key": "templateName",
+            "type": "textfield",
+            "input": true,
+            "label": "Template name",
+            "defaultValue": "Example template",
+            "tableView": true,
+            "applyMaskOn": "change",
+            "validate": {
+                "required": true
+            }
+        },
+        {
+            "key": "format",
+            "type": "select",
+            "input": true,
+            "label": "Document format",
+            "widget": "choicesjs",
+            "dataSrc": "values",
+            "data": {
+                "values": [
+                    {
+                        "label": "DOCX",
+                        "value": "DOCX"
+                    },
+                    {
+                        "label": "PDF",
+                        "value": "PDF"
+                    },
+                    {
+                        "label": "HTML",
+                        "value": "HTML"
+                    },
+                    {
+                        "label": "XML",
+                        "value": "XML"
+                    }
+                ]
+            },
+            "defaultValue": "PDF",
+            "tableView": true,
+            "validate": {
+                "required": true
+            }
+        },
+        {
+            "key": "payloadFormat",
+            "type": "select",
+            "input": true,
+            "label": "Payload format",
+            "widget": "choicesjs",
+            "dataSrc": "values",
+            "description": "How the template data is sent to SmartDocuments. Only XML keeps line breaks (xml:space=\"preserve\").",
+            "data": {
+                "values": [
+                    {
+                        "label": "JSON",
+                        "value": "JSON"
+                    },
+                    {
+                        "label": "XML",
+                        "value": "XML"
+                    }
+                ]
+            },
+            "defaultValue": "JSON",
+            "tableView": true,
+            "validate": {
+                "required": true
+            }
         },
         {
             "key": "submit",

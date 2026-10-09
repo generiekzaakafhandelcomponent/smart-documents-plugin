@@ -1,18 +1,21 @@
 {
-    "name": "sample-plugin",
+    "name": "smartdocuments",
     "version": 1,
     "backend": [
         {
-            "import": "com.ritense.valtimoplugins:sample-plugin"
+            "import": "com.ritense.valtimoplugins:smartdocuments"
         }
     ],
     "frontend": {
-        "import": "@valtimo-plugins/sample-plugin",
+        "import": "@valtimo-plugins/smartdocuments",
         "codeAdditions": [
             {
-                "spec": "samplePluginSpecification",
-                "module": "SamplePluginModule"
+                "spec": "smartDocumentsPluginSpecification",
+                "module": "SmartDocumentsPluginModule"
             }
         ]
-    }
+    },
+    "editions": [
+        "gzac"
+    ]
 }

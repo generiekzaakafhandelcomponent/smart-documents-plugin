@@ -1,0 +1,7 @@
+[
+    {
+        "processDefinitionKey": "informatieverzoek-test-process",
+        "canInitializeDocument": true,
+        "startableByUser": true
+    }
+]

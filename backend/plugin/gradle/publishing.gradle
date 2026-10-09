@@ -23,8 +23,8 @@ pluginManager.withPlugin("maven-publish") {
                 version = pluginProperties.pluginVersion
 
                 pom {
-                    name = "Sample plugin module"
-                    description = "A module containing a sample plugin"
+                    name = "SmartDocuments document generation module"
+                    description = "The SmartDocuments document generation module implements document generation using the SmartDocument web API"
                     developers {
                         developer {
                             id = "team-valtimo"
