@@ -24,7 +24,7 @@ pluginManager.withPlugin("maven-publish") {
 
                 pom {
                     name = "SmartDocuments document generation module"
-                    description = "The SmartDocuments document generation module implements document generation using the SmartDocument web API"
+                    description = "The SmartDocuments document generation module implements document generation using the SmartDocument web API. This build is for Valtimo 12."
                     developers {
                         developer {
                             id = "team-valtimo"
