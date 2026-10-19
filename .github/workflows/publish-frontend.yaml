@@ -67,9 +67,10 @@ jobs:
       - name: Publish
         run: |
           PUBLISH_PATH=$(node -e "const p=require('path'); const d=require('./projects/${{ matrix.value }}/ng-package.json').dest; console.log(p.normalize(p.join('projects/${{ matrix.value }}', d)))")
-          # Valtimo 12 versions (x.y.z-V12) are published under the dist-tag "v12", so "latest" stays on the
+          # Valtimo 12 versions (x.y.z-V12) are published under the dist-tag "valtimo12", so "latest" stays on the
           # Valtimo 13 version from main. npm would otherwise move "latest" to every newly published version.
-          npm publish "$PUBLISH_PATH" --access public --tag v12
+          # The tag must not be a valid semver range, so "v12" (read as 12.x) is not allowed.
+          npm publish "$PUBLISH_PATH" --access public --tag valtimo12
         working-directory: frontend
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPMJS_SECRET }}

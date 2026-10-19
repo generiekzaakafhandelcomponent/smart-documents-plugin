@@ -3,7 +3,7 @@
 The frontend library of the SmartDocuments plugin for GZAC/Valtimo.
 
 **This build is for Valtimo 12** (Angular 17, `@valtimo/*` 12.x). The Valtimo 12 versions end in `-V12` and are published
-under the npm tag `v12`. Install the exact version:
+under the npm tag `valtimo12`. Install the exact version:
 
 ```shell
 npm i @valtimo-plugins/smartdocuments@1.1.0-V12
